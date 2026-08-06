@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Bán Hàng - Home Chicken</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        body { background: #f4f6f8; padding: 15px; color: #333; }
+        .container { display: flex; gap: 20px; max-width: 1400px; margin: 0 auto; flex-wrap: wrap; }
+        
+        /* Cột bên trái: Thực đơn & Thêm món */
+        .left-pane { flex: 1.8; min-width: 340px; }
+        .card { background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { font-size: 18px; margin-bottom: 12px; color: #d35400; border-bottom: 2px solid #f39c12; padding-bottom: 5px; }
+        
+        .form-inline { display: flex; gap: 8px; margin-bottom: 15px; }
+        .form-inline input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; outline: none; }
+        .form-inline input[type="text"] { flex: 2; }
+        .form-inline input[type="number"] { flex: 1; }
+        
+        .btn { padding: 8px 14px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-primary { background: #d35400; color: #fff; }
+        .btn-primary:hover { background: #e67e22; }
+        
+        .category-title { font-weight: bold; font-size: 15px; color: #2c3e50; margin: 15px 0 8px 0; padding-left: 5px; border-left: 4px solid #d35400; }
+        .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+        .menu-item { background: #fff8f0; border: 1px solid #f5d6b3; border-radius: 6px; padding: 10px; text-align: center; cursor: pointer; transition: 0.2s; font-size: 13px; }
+        .menu-item:hover { background: #d35400; color: white; border-color: #d35400; }
+        .menu-item .price { font-size: 13px; font-weight: bold; color: #e67e22; margin-top: 4px; }
+        .menu-item:hover .price { color: #fff; }
+
+        /* Cột bên phải: Hóa đơn / Giỏ hàng */
+        .right-pane { flex: 1.2; min-width: 320px; }
+        .bill-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+        .bill-table th, .bill-table td { text-align: left; padding: 8px; border-bottom: 1px solid #eee; font-size: 13px; }
+        .bill-table th { background: #f8f9fa; }
+        .qty-btn { width: 22px; height: 22px; border: 1px solid #ccc; background: #fff; border-radius: 3px; cursor: pointer; }
+        
+        .total-box { font-size: 18px; font-weight: bold; text-align: right; margin-top: 10px; color: #c0392b; }
+        .action-btns { margin-top: 15px; display: flex; gap: 10px; }
+        .btn-print { background: #27ae60; color: #fff; flex: 1; padding: 12px; font-size: 16px; }
+        .btn-clear { background: #e74c3c; color: #fff; padding: 12px; }
+
+        /* Khung xem trước Hóa đơn In */
+        #receipt-print { display: none; }
+
+        /* CSS Tối ưu cho Máy in Bill (Khổ giấy K80 hoặc K58) */
+        @media print {
+            body * { visibility: hidden; }
+            #receipt-print, #receipt-print * { visibility: visible; }
+            #receipt-print {
+                display: block !important;
+                position: absolute;
+                left: 0; top: 0;
+                width: 80mm;
+                font-family: 'Courier New', Courier, monospace;
+                font-size: 12px;
+                color: #000;
+                padding: 5px;
+            }
+            .receipt-header, .receipt-footer { text-align: center; margin-bottom: 8px; }
+            .receipt-table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+            .receipt-table th, .receipt-table td { text-align: left; padding: 3px 0; font-size: 11px; }
+            .receipt-table .num { text-align: right; }
+            .line { border-bottom: 1px dashed #000; margin: 5px 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Cột trái: Quản lý & Chọn món -->
+    <div class="left-pane">
+        <div class="card">
+            <h2>Quản Lý Món Ăn (Thêm món mới)</h2>
+            <div class="form-inline">
+                <input type="text" id="foodName" placeholder="Tên món">
+                <input type="number" id="foodPrice" placeholder="Giá (đ)">
+                <button class="btn btn-primary" onclick="addMenuItem()">Thêm món</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Thực Đơn HOME CHICKEN</h2>
+            <div id="menuContainer"></div>
+        </div>
+    </div>
+
+    <!-- Cột phải: Khung tính tiền -->
+    <div class="right-pane">
+        <div class="card">
+            <h2>Hóa Đơn Thanh Toán</h2>
+            <table class="bill-table">
+                <thead>
+                    <tr>
+                        <th>Tên món</th>
+                        <th style="width: 70px;">SL</th>
+                        <th style="text-align: right;">Thành tiền</th>
+                    </tr>
+                </thead>
+                <tbody id="cartBody"></tbody>
+            </table>
+
+            <div class="total-box">
+                Tổng tiền: <span id="grandTotal">0</span> đ
+            </div>
+
+            <div class="action-btns">
+                <button class="btn btn-clear" onclick="clearCart()">Xóa</button>
+                <button class="btn btn-print" onclick="printReceipt()">In Hóa Đơn</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mẫu hóa đơn ẩn dùng để in ra máy in -->
+<div id="receipt-print">
+    <div class="receipt-header">
+        <h2 style="font-size: 16px;">HOME CHICKEN</h2>
+        <p>ĐC: 01 Cao Thắng - P. Kon Tum - T. Quảng Ngãi</p>
+        <p>SĐT: 0392 375 906</p>
+        <p>FB: Ngô Thị Thảo Ni</p>
+        <div class="line"></div>
+        <p><b>HÓA ĐƠN THANH TOÁN</b></p>
+        <p id="printTime" style="font-size: 10px;"></p>
+    </div>
+    <div class="line"></div>
+    <table class="receipt-table">
+        <thead>
+            <tr>
+                <th>Món</th>
+                <th class="num">SL</th>
+                <th class="num">Thành tiền</th>
+            </tr>
+        </thead>
+        <tbody id="printBody"></tbody>
+    </table>
+    <div class="line"></div>
+    <p style="text-align: right; font-size: 14px; margin-top: 5px;">
+        <b>TỔNG CỘNG: <span id="printTotal">0</span> đ</b>
+    </p>
+    <div class="line"></div>
+    <div class="receipt-footer">
+        <p>Cảm ơn quý khách & Hẹn gặp lại!</p>
+    </div>
+</div>
+
+<script>
+    // Dữ liệu thực đơn trích xuất đầy đủ từ các hình ảnh
+    const defaultMenu = [
+        // Gà Viên Sốt
+        { category: "Gà Viên Sốt", name: "Gà Viên Sốt Cay Ngọt", price: 40000 },
+        { category: "Gà Viên Sốt", name: "Gà Viên Sốt Chua Ngọt", price: 40000 },
+        { category: "Gà Viên Sốt", name: "Gà Viên Sốt Phô Mai", price: 40000 },
+        { category: "Gà Viên Sốt", name: "Gà Viên Sốt Kem", price: 40000 },
+        { category: "Gà Viên Sốt", name: "Gà Viên Sốt Mắm Tỏi", price: 40000 },
+        { category: "Gà Viên Sốt", name: "Gà Viên Sốt Tương Tỏi", price: 40000 },
+        { category: "Gà Viên Sốt", name: "Gà Viên Lắc Phô Mai", price: 40000 },
+        { category: "Gà Viên Sốt", name: "Gà Mix 2 Vị (M)", price: 75000 },
+        { category: "Gà Viên Sốt", name: "Gà Mix 2 Vị (L)", price: 100000 },
+        { category: "Gà Viên Sốt", name: "Gà Mix 3 Vị (M)", price: 80000 },
+        { category: "Gà Viên Sốt", name: "Gà Mix 3 Vị (L)", price: 100000 },
+        { category: "Gà Viên Sốt", name: "Gà Mix 4-5 Vị", price: 120000 },
+
+        // Tokbokki
+        { category: "Tokbokki", name: "Tok truyền thống lắc PM", price: 25000 },
+        { category: "Tokbokki", name: "Tok cheese lắc PM", price: 25000 },
+        { category: "Tokbokki", name: "Tok sốt phô mai + kem", price: 40000 },
+        { category: "Tokbokki", name: "Tok cay chả cá Hàn", price: 35000 },
+        { category: "Tokbokki", name: "Tok cay king cheese Hàn", price: 45000 },
+        { category: "Tokbokki", name: "Tok cay mixx 2 loại", price: 55000 },
+        { category: "Tokbokki", name: "Mì tok truyền thống/PM", price: 55000 },
+        { category: "Tokbokki", name: "Tok mixx gà sốt", price: 50000 },
+        { category: "Tokbokki", name: "Chả cá sốt cay (1 xiên)", price: 15000 },
+
+        // Đồ Ăn No
+        { category: "Đồ Ăn No", name: "Mì Ý", price: 30000 },
+        { category: "Đồ Ăn No", name: "Mì Ý xúc xích", price: 37000 },
+        { category: "Đồ Ăn No", name: "Kimpap truyền thống", price: 25000 },
+        { category: "Đồ Ăn No", name: "Kimpap chiên", price: 27000 },
+        { category: "Đồ Ăn No", name: "Cơm Gà Viên Sốt", price: 37000 },
+        { category: "Đồ Ăn No", name: "Trứng cuộn rong biển", price: 20000 },
+
+        // Mì Tương Đen
+        { category: "Mì Tương Đen", name: "Mì Tương Đen Hàn Quốc", price: 40000 },
+        { category: "Mì Tương Đen", name: "Mì Tương Đen + Mandu", price: 50000 },
+        { category: "Mì Tương Đen", name: "Mì Tương Đen + Tok/Khoai", price: 50000 },
+        { category: "Mì Tương Đen", name: "Mì Tương Đen + Gà Viên", price: 70000 },
+
+        // Cơm Trộn
+        { category: "Cơm Trộn", name: "Cơm trộn Xúc Xích", price: 35000 },
+        { category: "Cơm Trộn", name: "Cơm trộn Gà Viên (sốt)", price: 35000 },
+        { category: "Cơm Trộn", name: "Cơm trộn chả cá (cay)", price: 35000 },
+        { category: "Cơm Trộn", name: "Cơm trộn bò Mỹ", price: 40000 },
+
+        // Các món ăn vặt
+        { category: "Món Ăn Vặt", name: "Khoai tây chiên", price: 20000 },
+        { category: "Món Ăn Vặt", name: "Khoai tây lắc phô mai", price: 25000 },
+        { category: "Món Ăn Vặt", name: "Xúc xích chiên (1 cây)", price: 10000 },
+        { category: "Món Ăn Vặt", name: "Mandu chiên (1 cái)", price: 10000 },
+        { category: "Món Ăn Vặt", name: "Viên Hải Sản Mayo", price: 25000 },
+        { category: "Món Ăn Vặt", name: "Phô Mai Que (1 cái)", price: 10000 },
+        { category: "Món Ăn Vặt", name: "HÁ Cảo Lắc Phô Mai", price: 40000 },
+        { category: "Món Ăn Vặt", name: "Cá/tôm/bò viên (1 xiên)", price: 5000 },
+
+        // Combo 1 - 2 người
+        { category: "Combo 1-2 Người", name: "Set 1: Mì Ý - Gà Viên - Khoai Tây", price: 60000 },
+        { category: "Combo 1-2 Người", name: "Set 2: Cơm Cuộn - Gà Viên", price: 55000 },
+        { category: "Combo 1-2 Người", name: "Set 3: Mì Ý - Cơm Cuộn - Gà Viên 2 vị", price: 80000 },
+        { category: "Combo 1-2 Người", name: "Set 4: Cơm Cuộn - Gà Viên 2 vị - 2 mandu", price: 80000 },
+        { category: "Combo 1-2 Người", name: "Set 5: Cơm Cuộn - Gà Viên 2 vị - Khoai lắc", price: 80000 },
+        { category: "Combo 1-2 Người", name: "Set 6: 2 Cơm Cuộn - Gà Viên 2 vị", price: 80000 },
+        { category: "Combo 1-2 Người", name: "Set 7: Mì Ý - Gà 2 Vị - Khoai Lắc", price: 80000 },
+        { category: "Combo 1-2 Người", name: "Set 8: Mì Ý - Gà 2 Vị - 2 mandu", price: 80000 },
+        { category: "Combo 1-2 Người", name: "Set 9: Mì Ý - Gà 2 Vị - Viên hải sản", price: 80000 },
+        { category: "Combo 1-2 Người", name: "Set 10: Mì Ý - Gà 2 Vị - Tok lắc PM", price: 80000 },
+
+        // Boxx 1-2 & 2-3 Người
+        { category: "Box & Set", name: "Box 1 (1-2 người)", price: 80000 },
+        { category: "Box & Set", name: "Box 2 (1-2 người)", price: 80000 },
+        { category: "Box & Set", name: "Box 3 (1-2 người)", price: 120000 },
+        { category: "Box & Set", name: "Box 4 (1-2 người)", price: 130000 },
+        { category: "Box & Set", name: "Box 5 (1-2 người)", price: 130000 },
+        { category: "Box & Set", name: "Couple 1 (2-3 người)", price: 135000 },
+        { category: "Box & Set", name: "Couple 2 (2-3 người)", price: 160000 },
+        { category: "Box & Set", name: "Couple 3 (2-3 người)", price: 150000 },
+        { category: "Box & Set", name: "Couple 4 (2-3 người)", price: 140000 },
+        { category: "Box & Set", name: "Couple 5 (2-3 người)", price: 145000 },
+
+        // Combo 3-4-5 / Couples
+        { category: "Combo 3-4-5", name: "COUPLE 6", price: 160000 },
+        { category: "Combo 3-4-5", name: "COUPLE 7", price: 160000 },
+        { category: "Combo 3-4-5", name: "COUPLE 8", price: 200000 },
+        { category: "Combo 3-4-5", name: "COUPLE 9", price: 250000 },
+
+        // Món thêm
+        { category: "Món Thêm", name: "Thêm Chả Cá", price: 10000 },
+        { category: "Món Thêm", name: "Thêm Phô Mai kéo sợi", price: 10000 },
+        { category: "Món Thêm", name: "Thêm Phô Mai cheddar", price: 10000 }
+    ];
+
+    let menu = JSON.parse(localStorage.getItem('homeChickenMenu')) || defaultMenu;
+    let cart = [];
+
+    // Hiển thị thực đơn theo từng nhóm danh mục
+    function renderMenu() {
+        const menuContainer = document.getElementById('menuContainer');
+        menuContainer.innerHTML = '';
+
+        // Lấy danh sách các danh mục độc nhất
+        const categories = [...new Set(menu.map(item => item.category || "Khác"))];
+
+        categories.forEach(cat => {
+            let catHTML = `<div class="category-title">${cat}</div><div class="menu-grid">`;
+            const items = menu.filter(item => (item.category || "Khác") === cat);
+
+            items.forEach(item => {
+                catHTML += `
+                    <div class="menu-item" onclick="addToCart(${item.id || menu.indexOf(item)})">
+                        <div><b>${item.name}</b></div>
+                        <div class="price">${item.price.toLocaleString('vi-VN')} đ</div>
+                    </div>
+                `;
+            });
+            catHTML += `</div>`;
+            menuContainer.innerHTML += catHTML;
+        });
+
+        localStorage.setItem('homeChickenMenu', JSON.stringify(menu));
+    }
+
+    // Thêm món mới vào thực đơn thủ công
+    function addMenuItem() {
+        const name = document.getElementById('foodName').value.trim();
+        const price = parseInt(document.getElementById('foodPrice').value);
+
+        if (!name || isNaN(price) || price <= 0) {
+            alert('Vui lòng nhập tên món và giá hợp lệ!');
+            return;
+        }
+
+        menu.push({ category: "Khác", name, price });
+        document.getElementById('foodName').value = '';
+        document.getElementById('foodPrice').value = '';
+        renderMenu();
+    }
+
+    // Thêm món vào hóa đơn
+    function addToCart(index) {
+        const item = menu[index] || menu.find(m => m.id === index);
+        const existing = cart.find(c => c.name === item.name);
+
+        if (existing) {
+            existing.qty += 1;
+        } else {
+            cart.push({ ...item, qty: 1 });
+        }
+        renderCart();
+    }
+
+    // Cập nhật số lượng món
+    function updateQty(index, delta) {
+        cart[index].qty += delta;
+        if (cart[index].qty <= 0) {
+            cart.splice(index, 1);
+        }
+        renderCart();
+    }
+
+    // Xóa giỏ hàng
+    function clearCart() {
+        cart = [];
+        renderCart();
+    }
+
+    // Cập nhật giao diện giỏ hàng
+    function renderCart() {
+        const cartBody = document.getElementById('cartBody');
+        cartBody.innerHTML = '';
+        let total = 0;
+
+        cart.forEach((item, index) => {
+            const subtotal = item.price * item.qty;
+            total += subtotal;
+            cartBody.innerHTML += `
+                <tr>
+                    <td>${item.name}</td>
+                    <td>
+                        <button class="qty-btn" onclick="updateQty(${index}, -1)">-</button>
+                        ${item.qty}
+                        <button class="qty-btn" onclick="updateQty(${index}, 1)">+</button>
+                    </td>
+                    <td style="text-align: right;">${subtotal.toLocaleString('vi-VN')}</td>
+                </tr>
+            `;
+        });
+
+        document.getElementById('grandTotal').innerText = total.toLocaleString('vi-VN');
+    }
+
+    // In hóa đơn
+    function printReceipt() {
+        if (cart.length === 0) {
+            alert('Chưa có món nào trong hóa đơn!');
+            return;
+        }
+
+        const printBody = document.getElementById('printBody');
+        printBody.innerHTML = '';
+        let total = 0;
+
+        cart.forEach(item => {
+            const subtotal = item.price * item.qty;
+            total += subtotal;
+            printBody.innerHTML += `
+                <tr>
+                    <td>${item.name}</td>
+                    <td class="num">${item.qty}</td>
+                    <td class="num">${subtotal.toLocaleString('vi-VN')}</td>
+                </tr>
+            `;
+        });
+
+        document.getElementById('printTotal').innerText = total.toLocaleString('vi-VN');
+        document.getElementById('printTime').innerText = "Ngày: " + new Date().toLocaleString('vi-VN');
+
+        window.print();
+    }
+
+    // Khởi tạo trang
+    renderMenu();
+</script>
+
+</body>
+</html>
