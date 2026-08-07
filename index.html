@@ -38,9 +38,9 @@
         .form-row input, .form-row select { flex: 1; padding: 9px 10px; border: 1px solid #c7c7cc; border-radius: 8px; font-size: 13px; outline: none; background: #fff; }
         .form-row input:focus, .form-row select:focus { border-color: #d35400; }
 
-        .bill-table, .report-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; table-layout: fixed; }
-        .bill-table th, .bill-table td, .report-table th, .report-table td { padding: 10px 4px; border-bottom: 1px solid #e5e5ea; font-size: 13px; vertical-align: middle; }
-        .bill-table th, .report-table th { background: #f2f2f7; font-weight: 600; }
+        .bill-table, .report-table, .stock-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; table-layout: fixed; }
+        .bill-table th, .bill-table td, .report-table th, .report-table td, .stock-table th, .stock-table td { padding: 10px 4px; border-bottom: 1px solid #e5e5ea; font-size: 13px; vertical-align: middle; }
+        .bill-table th, .report-table th, .stock-table th { background: #f2f2f7; font-weight: 600; }
         
         .col-name { width: 34%; text-align: left; font-weight: 500; }
         .col-qty { width: 24%; text-align: center; }
@@ -69,10 +69,11 @@
         .summary-item { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px; }
         .summary-item:last-child { margin-bottom: 0; font-weight: bold; color: #27ae60; font-size: 16px; }
 
+        /* Thanh Điều Hướng Đáy */
         .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: #fff; border-top: 1px solid #d1d1d6; display: flex; justify-content: space-around; align-items: center; z-index: 200; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
-        .nav-item { flex: 1; text-align: center; color: #8e8e93; font-size: 11px; font-weight: 500; padding: 6px 0; text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .nav-item { flex: 1; text-align: center; color: #8e8e93; font-size: 10px; font-weight: 500; padding: 6px 0; text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 2px; }
         .nav-item.active { color: #d35400; font-weight: bold; }
-        .nav-icon { font-size: 18px; }
+        .nav-icon { font-size: 17px; }
 
         .cart-sticky-bar { position: fixed; bottom: 65px; left: 12px; right: 12px; background: #2c3e50; color: white; border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 150; cursor: pointer; }
 
@@ -178,7 +179,51 @@
         </div>
     </div>
 
-    <!-- TAB 3: BÁO CÁO -->
+    <!-- TAB 3: QUẢN LÝ NGUYÊN LIỆU (CÓ NGÀY NHẬP & TỔNG THEO NGÀY) -->
+    <div id="tab-stock" class="tab-content">
+        <div class="card">
+            <h2>Nhập Nguyên Liệu Mới</h2>
+            <div class="info-form">
+                <div class="form-row">
+                    <label for="stockDate">Ngày nhập:</label>
+                    <input type="date" id="stockDate">
+                </div>
+                <div class="form-row">
+                    <label for="stockName">Tên NL:</label>
+                    <input type="text" id="stockName" placeholder="Vd: Thịt gà, Bột phô mai, Dầu ăn...">
+                </div>
+                <div class="form-row">
+                    <label for="stockUnit">Đơn vị:</label>
+                    <input type="text" id="stockUnit" placeholder="Vd: kg, gói, lít, chai, hộp...">
+                </div>
+                <div class="form-row">
+                    <label for="stockQty">Số lượng:</label>
+                    <input type="number" id="stockQty" placeholder="0" min="0">
+                </div>
+                <div class="form-row">
+                    <label for="stockPrice">Đơn giá nhập:</label>
+                    <input type="number" id="stockPrice" placeholder="Giá nhập 1 đơn vị (đ)">
+                </div>
+                <button class="btn btn-primary" onclick="addStockItem()" style="margin-top: 4px;">Thêm Vào Kho</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Danh Sách Kho Nguyên Liệu</h2>
+            <div class="summary-box" style="margin-bottom: 10px;">
+                <div class="summary-item">
+                    <span>Tổng giá trị kho nguyên liệu:</span>
+                    <span id="totalStockValue">0 đ</span>
+                </div>
+            </div>
+
+            <div style="max-height: 400px; overflow-y: auto;">
+                <div id="stockContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 4: BÁO CÁO DOANH THU -->
     <div id="tab-report" class="tab-content">
         <div class="card">
             <h2>
@@ -220,6 +265,7 @@
     <span>Xem hóa đơn (<span id="stickyTotal">0</span> đ) ➔</span>
 </div>
 
+<!-- Thanh điều hướng đáy 4 Tab -->
 <div class="bottom-nav">
     <div class="nav-item active" id="nav-menu" onclick="switchTab('menu')">
         <div class="nav-icon">📖</div>
@@ -228,6 +274,10 @@
     <div class="nav-item" id="nav-cart" onclick="switchTab('cart')">
         <div class="nav-icon">🧾</div>
         <div>Hóa đơn</div>
+    </div>
+    <div class="nav-item" id="nav-stock" onclick="switchTab('stock')">
+        <div class="nav-icon">📦</div>
+        <div>Nguyên liệu</div>
     </div>
     <div class="nav-item" id="nav-report" onclick="switchTab('report')">
         <div class="nav-icon">📊</div>
@@ -344,21 +394,149 @@
         { category: "Món Thêm", name: "Thêm Chả Cá", price: 10000 },
         { category: "Món Thêm", name: "Thêm Phô Mai kéo sợi", price: 10000 },
         { category: "Món Thêm", name: "Thêm Phô Mai cheddar", price: 10000 },
-        { category: "Món Thêm", name: "Phí ship", price: 10000 }
+        { category: "Món Thêm", name: "Phí ship", price: 1000 }
     ];
 
     let menu = JSON.parse(localStorage.getItem('homeChickenMenu')) || defaultMenu;
-
     if (!menu.some(item => item.name === "Phí ship")) {
-        menu.push({ category: "Món Thêm", name: "Phí ship", price: 10000 });
+        menu.push({ category: "Món Thêm", name: "Phí ship", price: 1000 });
         localStorage.setItem('homeChickenMenu', JSON.stringify(menu));
     }
 
     let cart = [];
     let salesHistory = JSON.parse(localStorage.getItem('homeChickenSalesHistory')) || [];
+
+    // Lấy ngày hôm nay định dạng YYYY-MM-DD
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    let stockList = JSON.parse(localStorage.getItem('homeChickenStockList')) || [
+        { id: 1, date: todayStr, name: "Thịt gà viên", unit: "kg", qty: 20, price: 80000 },
+        { id: 2, date: todayStr, name: "Bánh gạo Tok", unit: "kg", qty: 15, price: 45000 }
+    ];
+
     let bluetoothDevice = null;
     let printCharacteristic = null;
 
+    // Gán ngày hôm nay vào ô chọn ngày nhập
+    document.getElementById('stockDate').value = todayStr;
+
+    // --- QUẢN LÝ KHO NGUYÊN LIỆU VÀ TỔNG THEO NGÀY ---
+    function renderStock() {
+        const stockContainer = document.getElementById('stockContainer');
+        stockContainer.innerHTML = '';
+        let totalValAll = 0;
+
+        // Lấy danh sách các ngày nhập (đã sắp xếp từ mới nhất)
+        const dates = [...new Set(stockList.map(item => item.date || todayStr))].sort().reverse();
+
+        if (dates.length === 0) {
+            stockContainer.innerHTML = '<div style="text-align: center; color: #8e8e93; padding: 15px;">Chưa có nguyên liệu nào trong kho!</div>';
+            document.getElementById('totalStockValue').innerText = "0 đ";
+            return;
+        }
+
+        dates.forEach(d => {
+            const itemsInDate = stockList.filter(item => (item.date || todayStr) === d);
+            let dayTotal = 0;
+
+            // Format ngày hiển thị DD/MM/YYYY
+            const dateParts = d.split('-');
+            const displayDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+
+            let dayHTML = `
+                <div style="background: #f8f9fa; padding: 6px 10px; border-radius: 6px; margin: 10px 0 4px 0; font-weight: bold; font-size: 13px; display: flex; justify-content: space-between; border-left: 3px solid #34c759;">
+                    <span>📅 Ngày: ${displayDate}</span>
+                    <span id="dayTotal-${d}" style="color: #27ae60;">0 đ</span>
+                </div>
+                <table class="stock-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 32%;">Tên NL</th>
+                            <th style="width: 28%; text-align: center;">Tồn kho</th>
+                            <th style="width: 25%; text-align: right;">Giá nhập</th>
+                            <th style="width: 15%; text-align: center;">Xóa</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            itemsInDate.forEach(item => {
+                const globalIndex = stockList.findIndex(s => s.id === item.id);
+                const itemTotal = item.qty * item.price;
+                dayTotal += itemTotal;
+                totalValAll += itemTotal;
+
+                dayHTML += `
+                    <tr>
+                        <td>
+                            <div><b>${item.name}</b></div>
+                            <div style="font-size: 10px; color: #7f8c8d;">ĐVT: ${item.unit}</div>
+                        </td>
+                        <td style="text-align: center;">
+                            <div class="qty-control">
+                                <button class="qty-btn" onclick="updateStockQty(${globalIndex}, -1)">-</button>
+                                <span class="qty-number">${item.qty}</span>
+                                <button class="qty-btn" onclick="updateStockQty(${globalIndex}, 1)">+</button>
+                            </div>
+                        </td>
+                        <td style="text-align: right; font-weight: 500;">${item.price.toLocaleString('vi-VN')} đ</td>
+                        <td style="text-align: center;">
+                            <button class="btn btn-danger btn-sm" onclick="deleteStockItem(${globalIndex})">Xóa</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            dayHTML += `</tbody></table>`;
+            stockContainer.innerHTML += dayHTML;
+            
+            // Cập nhật tổng tiền theo ngày
+            setTimeout(() => {
+                const dayElem = document.getElementById(`dayTotal-${d}`);
+                if (dayElem) dayElem.innerText = "Tổng: " + dayTotal.toLocaleString('vi-VN') + " đ";
+            }, 10);
+        });
+
+        document.getElementById('totalStockValue').innerText = totalValAll.toLocaleString('vi-VN') + " đ";
+        localStorage.setItem('homeChickenStockList', JSON.stringify(stockList));
+    }
+
+    function addStockItem() {
+        const date = document.getElementById('stockDate').value || todayStr;
+        const name = document.getElementById('stockName').value.trim();
+        const unit = document.getElementById('stockUnit').value.trim() || 'đơn vị';
+        const qty = parseFloat(document.getElementById('stockQty').value) || 0;
+        const price = parseInt(document.getElementById('stockPrice').value) || 0;
+
+        if (!name) {
+            alert('Vui lòng nhập tên nguyên liệu!');
+            return;
+        }
+
+        stockList.push({ id: Date.now(), date, name, unit, qty, price });
+        
+        document.getElementById('stockName').value = '';
+        document.getElementById('stockUnit').value = '';
+        document.getElementById('stockQty').value = '';
+        document.getElementById('stockPrice').value = '';
+
+        renderStock();
+    }
+
+    function updateStockQty(index, delta) {
+        stockList[index].qty += delta;
+        if (stockList[index].qty < 0) stockList[index].qty = 0;
+        renderStock();
+    }
+
+    function deleteStockItem(index) {
+        if (confirm('Bạn có chắc muốn xóa nguyên liệu này khỏi kho?')) {
+            stockList.splice(index, 1);
+            renderStock();
+        }
+    }
+
+    // --- CÁC TÍNH NĂNG POS BÁN HÀNG ---
     function toggleOrderFields() {
         const orderType = document.getElementById('orderType').value;
         const addressRow = document.getElementById('addressRow');
@@ -566,7 +744,6 @@
         const uiSubTotalRow = document.getElementById('uiSubTotalRow');
         const uiDiscountRow = document.getElementById('uiDiscountRow');
 
-        // Chỉ hiện Tạm tính & Giảm giá khi phần trăm giảm giá > 0
         if (discountPercent > 0) {
             uiSubTotalRow.style.display = 'block';
             uiDiscountRow.style.display = 'block';
@@ -748,6 +925,7 @@
     }
 
     renderMenu();
+    renderStock();
     renderHistory();
 </script>
 
