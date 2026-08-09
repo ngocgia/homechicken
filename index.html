@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Home Chicken - POS Mobile</title>
+    <title>Home Chicken - POS Supabase</title>
+    <!-- Thư viện Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background: #f2f2f7; padding-bottom: 75px; color: #1c1c1e; }
@@ -17,7 +19,7 @@
         .card { background: #fff; padding: 14px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 14px; }
         h2 { font-size: 16px; margin-bottom: 10px; color: #d35400; border-bottom: 2px solid #f39c12; padding-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
 
-        /* Ô Tìm Kiếm */
+        /* Search Box */
         .search-box { display: flex; align-items: center; position: relative; margin-bottom: 5px; }
         .search-input { width: 100%; padding: 12px 14px 12px 38px; border: 1px solid #c7c7cc; border-radius: 10px; font-size: 15px; outline: none; background: #f2f2f7; transition: 0.2s; }
         .search-input:focus { background: #fff; border-color: #d35400; box-shadow: 0 0 0 3px rgba(211, 84, 0, 0.15); }
@@ -31,7 +33,6 @@
         .menu-item .price { font-size: 13px; font-weight: bold; color: #e67e22; margin-top: 4px; }
         .menu-item:active .price { color: #fff; }
 
-        /* Khung thông tin khách hàng & giảm giá */
         .info-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
         .form-row { display: flex; align-items: center; gap: 8px; }
         .form-row label { font-weight: bold; font-size: 13px; width: 85px; white-space: nowrap; color: #2c3e50; }
@@ -60,6 +61,7 @@
 
         .btn { padding: 12px 14px; border: none; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; text-align: center; }
         .btn-bt { background: #007aff; color: #fff; width: 100%; font-size: 15px; margin-bottom: 8px; }
+        .btn-primary { background: #d35400; color: #fff; }
         .btn-print { background: #34c759; color: #fff; width: 100%; font-size: 16px; }
         .btn-clear { background: #ff3b30; color: #fff; width: 100%; font-size: 14px; }
         .btn-danger { background: #ff3b30; color: #fff; }
@@ -69,7 +71,6 @@
         .summary-item { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px; }
         .summary-item:last-child { margin-bottom: 0; font-weight: bold; color: #27ae60; font-size: 16px; }
 
-        /* Thanh Điều Hướng Đáy */
         .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: #fff; border-top: 1px solid #d1d1d6; display: flex; justify-content: space-around; align-items: center; z-index: 200; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
         .nav-item { flex: 1; text-align: center; color: #8e8e93; font-size: 10px; font-weight: 500; padding: 6px 0; text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 2px; }
         .nav-item.active { color: #d35400; font-weight: bold; }
@@ -77,7 +78,6 @@
 
         .cart-sticky-bar { position: fixed; bottom: 65px; left: 12px; right: 12px; background: #2c3e50; color: white; border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 150; cursor: pointer; }
 
-        /* Mẫu in bill */
         #receipt-print { display: none; }
         @media print {
             @page { size: auto; margin: 0mm; }
@@ -111,7 +111,7 @@
 
         <div class="card">
             <h2>Thực Đơn (Chạm để chọn món)</h2>
-            <div id="menuContainer"></div>
+            <div id="menuContainer">Loading Supabase Data...</div>
         </div>
     </div>
 
@@ -179,7 +179,7 @@
         </div>
     </div>
 
-    <!-- TAB 3: QUẢN LÝ NGUYÊN LIỆU (CÓ NGÀY NHẬP & TỔNG THEO NGÀY) -->
+    <!-- TAB 3: QUẢN LÝ NGUYÊN LIỆU -->
     <div id="tab-stock" class="tab-content">
         <div class="card">
             <h2>Nhập Nguyên Liệu Mới</h2>
@@ -218,7 +218,7 @@
             </div>
 
             <div style="max-height: 400px; overflow-y: auto;">
-                <div id="stockContainer"></div>
+                <div id="stockContainer">Loading Kho Supabase...</div>
             </div>
         </div>
     </div>
@@ -265,7 +265,6 @@
     <span>Xem hóa đơn (<span id="stickyTotal">0</span> đ) ➔</span>
 </div>
 
-<!-- Thanh điều hướng đáy 4 Tab -->
 <div class="bottom-nav">
     <div class="nav-item active" id="nav-menu" onclick="switchTab('menu')">
         <div class="nav-icon">📖</div>
@@ -323,6 +322,15 @@
 </div>
 
 <script>
+    // =========================================================================
+    // ⚙️ CẤU HÌNH SUPABASE (ĐIỀN CẢ BỘ THÔNG TIN CỦA BẠN VÀO ĐÂY)
+    // =========================================================================
+    const SUPABASE_URL = 'https://pxixtrwfvyzlvfnkszrm.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_mbWkuvRJYm0U1u5Ngfkulw_W_wVVS-o';
+    
+    // Khởi tạo Supabase Client
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
     const defaultMenu = [
         { category: "Gà Viên Sốt", name: "Gà Viên Sốt Cay Ngọt", price: 40000 },
         { category: "Gà Viên Sốt", name: "Gà Viên Sốt Chua Ngọt", price: 40000 },
@@ -397,36 +405,90 @@
         { category: "Món Thêm", name: "Phí ship", price: 1000 }
     ];
 
-    let menu = JSON.parse(localStorage.getItem('homeChickenMenu')) || defaultMenu;
-    if (!menu.some(item => item.name === "Phí ship")) {
-        menu.push({ category: "Món Thêm", name: "Phí ship", price: 1000 });
-        localStorage.setItem('homeChickenMenu', JSON.stringify(menu));
-    }
-
+    let menu = [];
     let cart = [];
-    let salesHistory = JSON.parse(localStorage.getItem('homeChickenSalesHistory')) || [];
-
-    // Lấy ngày hôm nay định dạng YYYY-MM-DD
-    const todayStr = new Date().toISOString().split('T')[0];
-
-    let stockList = JSON.parse(localStorage.getItem('homeChickenStockList')) || [
-        { id: 1, date: todayStr, name: "Thịt gà viên", unit: "kg", qty: 20, price: 80000 },
-        { id: 2, date: todayStr, name: "Bánh gạo Tok", unit: "kg", qty: 15, price: 45000 }
-    ];
-
+    let salesHistory = [];
+    let stockList = [];
     let bluetoothDevice = null;
     let printCharacteristic = null;
 
-    // Gán ngày hôm nay vào ô chọn ngày nhập
+    const todayStr = new Date().toISOString().split('T')[0];
     document.getElementById('stockDate').value = todayStr;
 
-    // --- QUẢN LÝ KHO NGUYÊN LIỆU VÀ TỔNG THEO NGÀY ---
+    // --- 1. TẢI VÀ ĐỒNG BỘ THỰC ĐƠN TỪ SUPABASE ---
+    async function loadMenuFromSupabase() {
+        const { data, error } = await db.from('menu').select('*');
+        if (error) {
+            console.error('Lỗi tải menu:', error);
+            menu = defaultMenu;
+        } else if (data.length === 0) {
+            // Tự động khởi tạo menu mặc định vào Database Supabase
+            await db.from('menu').insert(defaultMenu);
+            menu = defaultMenu;
+        } else {
+            menu = data;
+        }
+        renderMenu();
+    }
+
+    // --- 2. QUẢN LÝ KHO NGUYÊN LIỆU (SUPABASE) ---
+    async function loadStockFromSupabase() {
+        const { data, error } = await db.from('stock').select('*');
+        if (error) console.error('Lỗi tải kho:', error);
+        else stockList = data || [];
+        renderStock();
+    }
+
+    async function addStockItem() {
+        const date = document.getElementById('stockDate').value || todayStr;
+        const name = document.getElementById('stockName').value.trim();
+        const unit = document.getElementById('stockUnit').value.trim() || 'đơn vị';
+        const qty = parseFloat(document.getElementById('stockQty').value) || 0;
+        const price = parseInt(document.getElementById('stockPrice').value) || 0;
+
+        if (!name) {
+            alert('Vui lòng nhập tên nguyên liệu!');
+            return;
+        }
+
+        const newItem = { id: Date.now(), date, name, unit, qty, price };
+        const { error } = await db.from('stock').insert([newItem]);
+        if (error) {
+            alert('Lỗi lưu Supabase: ' + error.message);
+        } else {
+            stockList.push(newItem);
+            document.getElementById('stockName').value = '';
+            document.getElementById('stockUnit').value = '';
+            document.getElementById('stockQty').value = '';
+            document.getElementById('stockPrice').value = '';
+            renderStock();
+        }
+    }
+
+    async function updateStockQty(index, delta) {
+        stockList[index].qty += delta;
+        if (stockList[index].qty < 0) stockList[index].qty = 0;
+
+        const { error } = await db.from('stock').update({ qty: stockList[index].qty }).eq('id', stockList[index].id);
+        if (error) console.error(error);
+        renderStock();
+    }
+
+    async function deleteStockItem(index) {
+        if (confirm('Bạn có chắc muốn xóa nguyên liệu này khỏi kho?')) {
+            const { error } = await db.from('stock').delete().eq('id', stockList[index].id);
+            if (!error) {
+                stockList.splice(index, 1);
+                renderStock();
+            }
+        }
+    }
+
     function renderStock() {
         const stockContainer = document.getElementById('stockContainer');
         stockContainer.innerHTML = '';
         let totalValAll = 0;
 
-        // Lấy danh sách các ngày nhập (đã sắp xếp từ mới nhất)
         const dates = [...new Set(stockList.map(item => item.date || todayStr))].sort().reverse();
 
         if (dates.length === 0) {
@@ -439,7 +501,6 @@
             const itemsInDate = stockList.filter(item => (item.date || todayStr) === d);
             let dayTotal = 0;
 
-            // Format ngày hiển thị DD/MM/YYYY
             const dateParts = d.split('-');
             const displayDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
 
@@ -490,7 +551,6 @@
             dayHTML += `</tbody></table>`;
             stockContainer.innerHTML += dayHTML;
             
-            // Cập nhật tổng tiền theo ngày
             setTimeout(() => {
                 const dayElem = document.getElementById(`dayTotal-${d}`);
                 if (dayElem) dayElem.innerText = "Tổng: " + dayTotal.toLocaleString('vi-VN') + " đ";
@@ -498,45 +558,179 @@
         });
 
         document.getElementById('totalStockValue').innerText = totalValAll.toLocaleString('vi-VN') + " đ";
-        localStorage.setItem('homeChickenStockList', JSON.stringify(stockList));
     }
 
-    function addStockItem() {
-        const date = document.getElementById('stockDate').value || todayStr;
-        const name = document.getElementById('stockName').value.trim();
-        const unit = document.getElementById('stockUnit').value.trim() || 'đơn vị';
-        const qty = parseFloat(document.getElementById('stockQty').value) || 0;
-        const price = parseInt(document.getElementById('stockPrice').value) || 0;
+    // --- 3. BÁO CÁO DOANH THU & IN HÓA ĐƠN (SUPABASE) ---
+    async function loadSalesHistoryFromSupabase() {
+        const { data, error } = await db.from('sales_history').select('*');
+        if (error) console.error('Lỗi tải báo cáo:', error);
+        else salesHistory = data || [];
+        renderHistory();
+    }
 
-        if (!name) {
-            alert('Vui lòng nhập tên nguyên liệu!');
+    async function printReceipt() {
+        if (cart.length === 0) {
+            alert('Chưa có món nào trong hóa đơn!');
             return;
         }
 
-        stockList.push({ id: Date.now(), date, name, unit, qty, price });
+        const orderType = document.getElementById('orderType').value;
+        const customerName = document.getElementById('customerName').value.trim() || 'Khách vãng lai';
+        const customerPhone = document.getElementById('customerPhone').value.trim();
+        const customerAddress = document.getElementById('customerAddress').value.trim();
+        const pickupTime = document.getElementById('pickupTime').value;
+
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+
+        let subtotalTotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+        let discountPercent = parseFloat(document.getElementById('discountInput').value) || 0;
+        const discountAmount = Math.round((subtotalTotal * discountPercent) / 100);
+        const finalTotal = subtotalTotal - discountAmount;
+
+        const orderRecord = {
+            id: Date.now(),
+            time: timeStr,
+            type: orderType,
+            customer: customerName,
+            phone: customerPhone,
+            address: orderType === 'SHIP MANG VỀ' ? customerAddress : '',
+            pickup_time: orderType === 'KHÁCH TỚI LẤY' ? pickupTime : '',
+            subtotal: subtotalTotal,
+            discount_percent: discountPercent,
+            discount_amount: discountAmount,
+            total: finalTotal,
+            items: cart
+        };
+
+        // Lưu bản ghi hóa đơn lên Supabase
+        const { error } = await db.from('sales_history').insert([orderRecord]);
+        if (error) console.error('Lỗi lưu đơn hàng:', error);
+        else salesHistory.push(orderRecord);
+
+        let printText = `    HOME CHICKEN\n01 Cao Thang - Quang Ngai\nDT: 0392 375 906\n--------------------------------\n[ ${orderType} ]\nKhach: ${customerName}\n`;
+        if (customerPhone) printText += `SDT: ${customerPhone}\n`;
+        if (orderType === 'SHIP MANG VỀ' && customerAddress) {
+            printText += `DC: ${customerAddress}\n`;
+        } else if (orderType === 'KHÁCH TỚI LẤY' && pickupTime) {
+            printText += `Gio hen lay: ${pickupTime}\n`;
+        }
+        printText += `--------------------------------\n`;
+
+        cart.forEach(item => {
+            const subtotal = item.price * item.qty;
+            printText += `${item.name}\n  ${item.qty} x ${item.price.toLocaleString('vi-VN')} = ${subtotal.toLocaleString('vi-VN')} d\n`;
+            if (item.note && item.note.trim() !== '') {
+                printText += `  * Note: ${item.note.trim()}\n`;
+            }
+        });
+
+        if (discountPercent > 0) {
+            printText += `--------------------------------\nTam tinh: ${subtotalTotal.toLocaleString('vi-VN')} d\nGiam gia (${discountPercent}%): -${discountAmount.toLocaleString('vi-VN')} d\n`;
+        }
+
+        printText += `--------------------------------\nTONG CONG: ${finalTotal.toLocaleString('vi-VN')} d\n--------------------------------\n  Cam on quy khach & Hen gap lai!\n\n\n`;
+
+        document.getElementById('printOrderType').innerText = "[ " + orderType + " ]";
+        let infoHTML = `<b>Khách:</b> ${customerName}<br>`;
+        if (customerPhone) infoHTML += `<b>SĐT:</b> ${customerPhone}<br>`;
+        if (orderType === 'SHIP MANG VỀ' && customerAddress) {
+            infoHTML += `<b>Địa chỉ ship:</b> ${customerAddress}<br>`;
+        } else if (orderType === 'KHÁCH TỚI LẤY' && pickupTime) {
+            infoHTML += `<b>Giờ tới lấy:</b> ${pickupTime}<br>`;
+        }
         
-        document.getElementById('stockName').value = '';
-        document.getElementById('stockUnit').value = '';
-        document.getElementById('stockQty').value = '';
-        document.getElementById('stockPrice').value = '';
+        document.getElementById('printCustomerInfo').innerHTML = infoHTML;
 
-        renderStock();
+        const printBody = document.getElementById('printBody');
+        printBody.innerHTML = '';
+
+        cart.forEach(item => {
+            const subtotal = item.price * item.qty;
+            let rowHTML = `
+                <tr>
+                    <td>${item.name}</td>
+                    <td class="num">${item.qty}</td>
+                    <td class="num">${subtotal.toLocaleString('vi-VN')}</td>
+                </tr>
+            `;
+            if (item.note && item.note.trim() !== '') {
+                rowHTML += `<tr><td colspan="3" class="receipt-note">└> Ghi chú: ${item.note.trim()}</td></tr>`;
+            }
+            printBody.innerHTML += rowHTML;
+        });
+
+        const printDiscountBlock = document.getElementById('printDiscountBlock');
+        if (discountPercent > 0) {
+            document.getElementById('printSubTotal').innerText = subtotalTotal.toLocaleString('vi-VN');
+            document.getElementById('printDiscountPercent').innerText = discountPercent;
+            document.getElementById('printDiscountVal').innerText = discountAmount.toLocaleString('vi-VN');
+            printDiscountBlock.style.display = 'block';
+        } else {
+            printDiscountBlock.style.display = 'none';
+        }
+
+        document.getElementById('printTotal').innerText = finalTotal.toLocaleString('vi-VN');
+
+        await printBluetooth(printText);
+
+        clearCart();
+        renderHistory();
+        switchTab('menu');
     }
 
-    function updateStockQty(index, delta) {
-        stockList[index].qty += delta;
-        if (stockList[index].qty < 0) stockList[index].qty = 0;
-        renderStock();
+    function renderHistory() {
+        const historyBody = document.getElementById('historyBody');
+        historyBody.innerHTML = '';
+
+        let grandTotalDaily = 0;
+        const reversedHistory = [...salesHistory].reverse();
+
+        reversedHistory.forEach((order) => {
+            grandTotalDaily += order.total;
+            let subDetail = order.type || '';
+            if (order.pickup_time) subDetail += ` (${order.pickup_time})`;
+
+            historyBody.innerHTML += `
+                <tr>
+                    <td><b>${order.time}</b></td>
+                    <td>
+                        <div><b>${order.customer}</b></div>
+                        <div style="font-size: 10px; color: #7f8c8d;">${subDetail}</div>
+                    </td>
+                    <td style="text-align: right; font-weight: bold; color: #d35400;">${order.total.toLocaleString('vi-VN')} đ</td>
+                    <td style="text-align: center;">
+                        <button class="btn btn-danger btn-sm" onclick="deleteOrder(${order.id})">Xóa</button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        document.getElementById('dailyOrderCount').innerText = salesHistory.length + " đơn";
+        document.getElementById('dailyTotalAmount').innerText = grandTotalDaily.toLocaleString('vi-VN') + " đ";
     }
 
-    function deleteStockItem(index) {
-        if (confirm('Bạn có chắc muốn xóa nguyên liệu này khỏi kho?')) {
-            stockList.splice(index, 1);
-            renderStock();
+    async function deleteOrder(orderId) {
+        if (confirm('Bạn có chắc muốn xóa hóa đơn này khỏi Supabase?')) {
+            const { error } = await db.from('sales_history').delete().eq('id', orderId);
+            if (!error) {
+                salesHistory = salesHistory.filter(o => o.id !== orderId);
+                renderHistory();
+            }
         }
     }
 
-    // --- CÁC TÍNH NĂNG POS BÁN HÀNG ---
+    async function resetDailySales() {
+        if (confirm('Bạn có chắc muốn xóa TOÀN BỘ lịch sử đơn hàng trên Supabase để bắt đầu ngày làm việc mới?')) {
+            const { error } = await db.from('sales_history').delete().neq('id', 0);
+            if (!error) {
+                salesHistory = [];
+                renderHistory();
+            }
+        }
+    }
+
+    // --- CÁC HÀM BỔ TRỢ GIAO DIỆN ---
     function toggleOrderFields() {
         const orderType = document.getElementById('orderType').value;
         const addressRow = document.getElementById('addressRow');
@@ -756,7 +950,6 @@
         }
 
         document.getElementById('grandTotal').innerText = finalTotal.toLocaleString('vi-VN');
-
         document.getElementById('stickyQty').innerText = totalQty;
         document.getElementById('stickyTotal').innerText = finalTotal.toLocaleString('vi-VN');
 
@@ -768,165 +961,10 @@
         }
     }
 
-    async function printReceipt() {
-        if (cart.length === 0) {
-            alert('Chưa có món nào trong hóa đơn!');
-            return;
-        }
-
-        const orderType = document.getElementById('orderType').value;
-        const customerName = document.getElementById('customerName').value.trim() || 'Khách vãng lai';
-        const customerPhone = document.getElementById('customerPhone').value.trim();
-        const customerAddress = document.getElementById('customerAddress').value.trim();
-        const pickupTime = document.getElementById('pickupTime').value;
-
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-
-        let subtotalTotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-        let discountPercent = parseFloat(document.getElementById('discountInput').value) || 0;
-        const discountAmount = Math.round((subtotalTotal * discountPercent) / 100);
-        const finalTotal = subtotalTotal - discountAmount;
-
-        const orderRecord = {
-            id: Date.now(),
-            time: timeStr,
-            type: orderType,
-            customer: customerName,
-            phone: customerPhone,
-            address: orderType === 'SHIP MANG VỀ' ? customerAddress : '',
-            pickupTime: orderType === 'KHÁCH TỚI LẤY' ? pickupTime : '',
-            subtotal: subtotalTotal,
-            discountPercent: discountPercent,
-            discountAmount: discountAmount,
-            total: finalTotal,
-            items: JSON.parse(JSON.stringify(cart))
-        };
-
-        salesHistory.push(orderRecord);
-        localStorage.setItem('homeChickenSalesHistory', JSON.stringify(salesHistory));
-
-        let printText = `    HOME CHICKEN\n01 Cao Thang - Quang Ngai\nDT: 0392 375 906\n--------------------------------\n[ ${orderType} ]\nKhach: ${customerName}\n`;
-        if (customerPhone) printText += `SDT: ${customerPhone}\n`;
-        if (orderType === 'SHIP MANG VỀ' && customerAddress) {
-            printText += `DC: ${customerAddress}\n`;
-        } else if (orderType === 'KHÁCH TỚI LẤY' && pickupTime) {
-            printText += `Gio hen lay: ${pickupTime}\n`;
-        }
-        printText += `--------------------------------\n`;
-
-        cart.forEach(item => {
-            const subtotal = item.price * item.qty;
-            printText += `${item.name}\n  ${item.qty} x ${item.price.toLocaleString('vi-VN')} = ${subtotal.toLocaleString('vi-VN')} d\n`;
-            if (item.note && item.note.trim() !== '') {
-                printText += `  * Note: ${item.note.trim()}\n`;
-            }
-        });
-
-        if (discountPercent > 0) {
-            printText += `--------------------------------\nTam tinh: ${subtotalTotal.toLocaleString('vi-VN')} d\nGiam gia (${discountPercent}%): -${discountAmount.toLocaleString('vi-VN')} d\n`;
-        }
-
-        printText += `--------------------------------\nTONG CONG: ${finalTotal.toLocaleString('vi-VN')} d\n--------------------------------\n  Cam on quy khach & Hen gap lai!\n\n\n`;
-
-        document.getElementById('printOrderType').innerText = "[ " + orderType + " ]";
-        let infoHTML = `<b>Khách:</b> ${customerName}<br>`;
-        if (customerPhone) infoHTML += `<b>SĐT:</b> ${customerPhone}<br>`;
-        if (orderType === 'SHIP MANG VỀ' && customerAddress) {
-            infoHTML += `<b>Địa chỉ ship:</b> ${customerAddress}<br>`;
-        } else if (orderType === 'KHÁCH TỚI LẤY' && pickupTime) {
-            infoHTML += `<b>Giờ tới lấy:</b> ${pickupTime}<br>`;
-        }
-        
-        document.getElementById('printCustomerInfo').innerHTML = infoHTML;
-
-        const printBody = document.getElementById('printBody');
-        printBody.innerHTML = '';
-
-        cart.forEach(item => {
-            const subtotal = item.price * item.qty;
-            let rowHTML = `
-                <tr>
-                    <td>${item.name}</td>
-                    <td class="num">${item.qty}</td>
-                    <td class="num">${subtotal.toLocaleString('vi-VN')}</td>
-                </tr>
-            `;
-            if (item.note && item.note.trim() !== '') {
-                rowHTML += `<tr><td colspan="3" class="receipt-note">└> Ghi chú: ${item.note.trim()}</td></tr>`;
-            }
-            printBody.innerHTML += rowHTML;
-        });
-
-        const printDiscountBlock = document.getElementById('printDiscountBlock');
-        if (discountPercent > 0) {
-            document.getElementById('printSubTotal').innerText = subtotalTotal.toLocaleString('vi-VN');
-            document.getElementById('printDiscountPercent').innerText = discountPercent;
-            document.getElementById('printDiscountVal').innerText = discountAmount.toLocaleString('vi-VN');
-            printDiscountBlock.style.display = 'block';
-        } else {
-            printDiscountBlock.style.display = 'none';
-        }
-
-        document.getElementById('printTotal').innerText = finalTotal.toLocaleString('vi-VN');
-
-        await printBluetooth(printText);
-
-        clearCart();
-        renderHistory();
-        switchTab('menu');
-    }
-
-    function renderHistory() {
-        const historyBody = document.getElementById('historyBody');
-        historyBody.innerHTML = '';
-
-        let grandTotalDaily = 0;
-        const reversedHistory = [...salesHistory].reverse();
-
-        reversedHistory.forEach((order) => {
-            grandTotalDaily += order.total;
-            let subDetail = order.type || '';
-            if (order.pickupTime) subDetail += ` (${order.pickupTime})`;
-
-            historyBody.innerHTML += `
-                <tr>
-                    <td><b>${order.time}</b></td>
-                    <td>
-                        <div><b>${order.customer}</b></div>
-                        <div style="font-size: 10px; color: #7f8c8d;">${subDetail}</div>
-                    </td>
-                    <td style="text-align: right; font-weight: bold; color: #d35400;">${order.total.toLocaleString('vi-VN')} đ</td>
-                    <td style="text-align: center;">
-                        <button class="btn btn-danger btn-sm" onclick="deleteOrder(${order.id})">Xóa</button>
-                    </td>
-                </tr>
-            `;
-        });
-
-        document.getElementById('dailyOrderCount').innerText = salesHistory.length + " đơn";
-        document.getElementById('dailyTotalAmount').innerText = grandTotalDaily.toLocaleString('vi-VN') + " đ";
-    }
-
-    function deleteOrder(orderId) {
-        if (confirm('Bạn có chắc muốn xóa hóa đơn này khỏi báo cáo hôm nay không?')) {
-            salesHistory = salesHistory.filter(o => o.id !== orderId);
-            localStorage.setItem('homeChickenSalesHistory', JSON.stringify(salesHistory));
-            renderHistory();
-        }
-    }
-
-    function resetDailySales() {
-        if (confirm('Bạn có chắc muốn chốt doanh thu hôm nay và xóa lịch sử đơn hàng để bắt đầu ngày làm việc mới?')) {
-            salesHistory = [];
-            localStorage.setItem('homeChickenSalesHistory', JSON.stringify(salesHistory));
-            renderHistory();
-        }
-    }
-
-    renderMenu();
-    renderStock();
-    renderHistory();
+    // --- KHỞI TẠO DỮ LIỆU TỪ SUPABASE KHI MỞ ỨNG DỤNG ---
+    loadMenuFromSupabase();
+    loadStockFromSupabase();
+    loadSalesHistoryFromSupabase();
 </script>
 
 </body>
