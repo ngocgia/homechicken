@@ -90,13 +90,17 @@ let printCharacteristic = null;
 const todayStr = new Date().toISOString().split('T')[0];
 
 document.getElementById('stockDate').value = todayStr;
+document.getElementById('stockFilterStartDate').value = todayStr;
+document.getElementById('stockFilterEndDate').value = todayStr;
 document.getElementById('filterStartDate').value = todayStr;
 document.getElementById('filterEndDate').value = todayStr;
 
 // Đóng popup khi chạm ra ngoài
 document.addEventListener('click', function(e) {
-    if (!e.target.classList.contains('menu-dots-btn') && !e.target.classList.contains('action-dots-btn')) {
-        document.querySelectorAll('.menu-dropdown, .action-dropdown').forEach(el => el.classList.remove('show'));
+    if (!e.target.classList.contains('menu-dots-btn') && 
+        !e.target.classList.contains('action-dots-btn') && 
+        !e.target.classList.contains('stock-dots-btn')) {
+        document.querySelectorAll('.menu-dropdown, .action-dropdown, .stock-dropdown').forEach(el => el.classList.remove('show'));
     }
 });
 
@@ -176,7 +180,7 @@ function cancelEditMenu() {
 
 function toggleMenuDropdown(id, event) {
     event.stopPropagation();
-    document.querySelectorAll('.menu-dropdown, .action-dropdown').forEach(el => {
+    document.querySelectorAll('.menu-dropdown, .action-dropdown, .stock-dropdown').forEach(el => {
         if (el.id !== `dropdown-${id}`) el.classList.remove('show');
     });
 
@@ -307,15 +311,28 @@ function renderCart() {
     }
 }
 
-// --- 3. QUẢN LÝ KHO NGUYÊN LIỆU (SUPABASE) ---
+// --- 3. QUẢN LÝ KHO NGUYÊN LIỆU (LỌC, ẨN/HIỆN NGÀY & SỬA/XÓA/XEM - SỐ LƯỢNG TĨNH) ---
 async function loadStockFromSupabase() {
-    const { data, error } = await db.from('stock').select('*');
+    const { data, error } = await db.from('stock').select('*').order('date', { ascending: false });
     if (error) console.error('Lỗi tải kho:', error);
     else stockList = data || [];
     renderStock();
 }
 
+function setTodayStockFilter() {
+    document.getElementById('stockFilterStartDate').value = todayStr;
+    document.getElementById('stockFilterEndDate').value = todayStr;
+    renderStock();
+}
+
+function resetStockDateFilter() {
+    document.getElementById('stockFilterStartDate').value = '';
+    document.getElementById('stockFilterEndDate').value = '';
+    renderStock();
+}
+
 async function addStockItem() {
+    const editId = document.getElementById('editStockId').value;
     const date = document.getElementById('stockDate').value || todayStr;
     const name = document.getElementById('stockName').value.trim();
     const unit = document.getElementById('stockUnit').value.trim() || 'đơn vị';
@@ -327,104 +344,222 @@ async function addStockItem() {
         return;
     }
 
-    const newItem = { id: Date.now(), date, name, unit, qty, price };
-    const { error } = await db.from('stock').insert([newItem]);
-    if (error) {
-        alert('Lỗi lưu Supabase: ' + error.message);
+    if (editId) {
+        const { error } = await db.from('stock').update({ date, name, unit, qty, price }).eq('id', editId);
+        if (error) {
+            alert('Lỗi cập nhật nguyên liệu: ' + error.message);
+        } else {
+            alert('Đã cập nhật nguyên liệu thành công!');
+            cancelEditStock();
+            loadStockFromSupabase();
+        }
     } else {
-        stockList.push(newItem);
-        document.getElementById('stockName').value = '';
-        document.getElementById('stockUnit').value = '';
-        document.getElementById('stockQty').value = '';
-        document.getElementById('stockPrice').value = '';
-        renderStock();
-    }
-}
-
-async function updateStockQty(index, delta) {
-    stockList[index].qty += delta;
-    if (stockList[index].qty < 0) stockList[index].qty = 0;
-
-    const { error } = await db.from('stock').update({ qty: stockList[index].qty }).eq('id', stockList[index].id);
-    if (error) console.error(error);
-    renderStock();
-}
-
-async function deleteStockItem(index) {
-    if (confirm('Bạn có chắc muốn xóa nguyên liệu này khỏi kho?')) {
-        const { error } = await db.from('stock').delete().eq('id', stockList[index].id);
-        if (!error) {
-            stockList.splice(index, 1);
+        const newItem = { id: Date.now(), date, name, unit, qty, price };
+        const { error } = await db.from('stock').insert([newItem]);
+        if (error) {
+            alert('Lỗi lưu Supabase: ' + error.message);
+        } else {
+            stockList.push(newItem);
+            cancelEditStock();
             renderStock();
         }
     }
 }
 
+function startEditStock(id, event) {
+    if (event) event.stopPropagation();
+    const item = stockList.find(s => s.id === id);
+    if (!item) return;
+
+    document.getElementById('stockFormTitle').innerText = 'Chỉnh Sửa Nguyên Liệu';
+    document.getElementById('editStockId').value = item.id;
+    document.getElementById('stockDate').value = item.date || todayStr;
+    document.getElementById('stockName').value = item.name;
+    document.getElementById('stockUnit').value = item.unit;
+    document.getElementById('stockQty').value = item.qty;
+    document.getElementById('stockPrice').value = item.price;
+    document.getElementById('btnCancelStockEdit').style.display = 'block';
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function cancelEditStock() {
+    document.getElementById('editStockId').value = '';
+    document.getElementById('stockFormTitle').innerText = 'Nhập Nguyên Liệu Mới';
+    document.getElementById('stockDate').value = todayStr;
+    document.getElementById('stockName').value = '';
+    document.getElementById('stockUnit').value = '';
+    document.getElementById('stockQty').value = '';
+    document.getElementById('stockPrice').value = '';
+    document.getElementById('btnCancelStockEdit').style.display = 'none';
+}
+
+function viewStockDetail(id, event) {
+    if (event) event.stopPropagation();
+    const item = stockList.find(s => s.id === id);
+    if (!item) return;
+
+    const itemTotal = item.qty * item.price;
+    const dateParts = (item.date || todayStr).split('-');
+    const displayDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+
+    let infoHTML = `
+        <b>Tên nguyên liệu:</b> ${item.name}<br>
+        <b>Ngày nhập:</b> ${displayDate}<br>
+        <b>Số lượng:</b> ${item.qty} ${item.unit}<br>
+        <b>Đơn giá nhập:</b> ${item.price.toLocaleString('vi-VN')} đ / ${item.unit}<br>
+        <hr style="margin: 8px 0; border: 0; border-top: 1px dashed #ccc;">
+        <b style="color: #c0392b; font-size: 14px;">TỔNG GIÁ TRỊ NHẬP: ${itemTotal.toLocaleString('vi-VN')} đ</b>
+    `;
+
+    document.getElementById('modalStockInfo').innerHTML = infoHTML;
+    document.getElementById('stockDetailModal').style.display = 'block';
+}
+
+function closeStockDetailModal() {
+    document.getElementById('stockDetailModal').style.display = 'none';
+}
+
+async function deleteStockItem(id, event) {
+    if (event) event.stopPropagation();
+    const item = stockList.find(s => s.id === id);
+    const itemName = item ? item.name : 'nguyên liệu này';
+
+    if (confirm(`Bạn có chắc muốn xóa "${itemName}" khỏi kho nguyên liệu?`)) {
+        const { error } = await db.from('stock').delete().eq('id', id);
+        if (!error) {
+            stockList = stockList.filter(s => s.id !== id);
+            renderStock();
+        } else {
+            alert('Lỗi xóa nguyên liệu: ' + error.message);
+        }
+    }
+}
+
+function toggleStockDayBlock(dateKey) {
+    const contentBox = document.getElementById(`stockBlock-${dateKey}`);
+    const iconElem = document.getElementById(`stockToggleIcon-${dateKey}`);
+    
+    if (contentBox) {
+        if (contentBox.style.display === 'none') {
+            contentBox.style.display = 'block';
+            if (iconElem) iconElem.innerText = '▲ Thu gọn';
+        } else {
+            contentBox.style.display = 'none';
+            if (iconElem) iconElem.innerText = '▼ Xem chi tiết';
+        }
+    }
+}
+
+function toggleStockDropdown(id, event) {
+    event.stopPropagation();
+    document.querySelectorAll('.menu-dropdown, .action-dropdown, .stock-dropdown').forEach(el => {
+        if (el.id !== `stock-dropdown-${id}`) el.classList.remove('show');
+    });
+
+    const currentDropdown = document.getElementById(`stock-dropdown-${id}`);
+    if (currentDropdown) currentDropdown.classList.toggle('show');
+}
+
 function renderStock() {
     const stockContainer = document.getElementById('stockContainer');
     stockContainer.innerHTML = '';
+
+    const startDate = document.getElementById('stockFilterStartDate').value;
+    const endDate = document.getElementById('stockFilterEndDate').value;
+
+    let filteredStock = stockList;
+
+    if (startDate || endDate) {
+        filteredStock = stockList.filter(item => {
+            let itemDate = item.date || todayStr;
+            if (startDate && itemDate < startDate) return false;
+            if (endDate && itemDate > endDate) return false;
+            return true;
+        });
+    }
+
     let totalValAll = 0;
 
-    const dates = [...new Set(stockList.map(item => item.date || todayStr))].sort().reverse();
-
-    if (dates.length === 0) {
-        stockContainer.innerHTML = '<div style="text-align: center; color: #8e8e93; padding: 15px;">Chưa có nguyên liệu nào trong kho!</div>';
+    if (filteredStock.length === 0) {
+        stockContainer.innerHTML = '<div style="text-align: center; color: #8e8e93; padding: 20px;">Không có nguyên liệu nào trong khoảng thời gian này!</div>';
         document.getElementById('totalStockValue').innerText = "0 đ";
         return;
     }
 
-    dates.forEach(d => {
-        const itemsInDate = stockList.filter(item => (item.date || todayStr) === d);
+    const stockByDate = {};
+    filteredStock.forEach(item => {
+        let dateKey = item.date || todayStr;
+        if (!stockByDate[dateKey]) {
+            stockByDate[dateKey] = [];
+        }
+        stockByDate[dateKey].push(item);
+    });
+
+    const dates = Object.keys(stockByDate).sort().reverse();
+
+    dates.forEach((d, index) => {
+        const itemsInDate = stockByDate[d];
         let dayTotal = 0;
 
         const dateParts = d.split('-');
         const displayDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
 
+        const isDefaultOpen = index === 0;
+        const displayStyle = isDefaultOpen ? 'block' : 'none';
+        const iconText = isDefaultOpen ? '▲ Thu gọn' : '▼ Xem chi tiết';
+
         let dayHTML = `
-            <div style="background: #f8f9fa; padding: 6px 10px; border-radius: 6px; margin: 10px 0 4px 0; font-weight: bold; font-size: 13px; display: flex; justify-content: space-between; border-left: 3px solid #34c759;">
-                <span>📅 Ngày: ${displayDate}</span>
+            <div class="day-toggle-header stock-header" onclick="toggleStockDayBlock('${d}')">
+                <div>
+                    📅 <b>Ngày nhập: ${displayDate}</b> (${itemsInDate.length} NL)
+                    <span class="day-toggle-icon" id="stockToggleIcon-${d}">${iconText}</span>
+                </div>
                 <span id="dayTotal-${d}" style="color: #27ae60;">0 đ</span>
             </div>
-            <table class="stock-table">
-                <thead>
-                    <tr>
-                        <th style="width: 32%;">Tên NL</th>
-                        <th style="width: 28%; text-align: center;">Tồn kho</th>
-                        <th style="width: 25%; text-align: right;">Giá nhập</th>
-                        <th style="width: 15%; text-align: center;">Xóa</th>
-                    </tr>
-                </thead>
-                <tbody>
+            
+            <div id="stockBlock-${d}" style="display: ${displayStyle}; overflow-x: visible;">
+                <table class="stock-table" style="margin-bottom: 5px;">
+                    <thead>
+                        <tr>
+                            <th style="width: 35%;">Tên NL</th>
+                            <th style="width: 25%; text-align: center;">Số lượng</th>
+                            <th style="width: 25%; text-align: right;">Giá nhập</th>
+                            <th style="width: 15%; text-align: center;">⚙️</th>
+                        </tr>
+                    </thead>
+                    <tbody>
         `;
 
         itemsInDate.forEach(item => {
-            const globalIndex = stockList.findIndex(s => s.id === item.id);
             const itemTotal = item.qty * item.price;
             dayTotal += itemTotal;
             totalValAll += itemTotal;
 
             dayHTML += `
                 <tr>
-                    <td>
+                    <td onclick="viewStockDetail(${item.id}, event)" style="cursor: pointer;">
                         <div><b>${item.name}</b></div>
                         <div style="font-size: 10px; color: #7f8c8d;">ĐVT: ${item.unit}</div>
                     </td>
                     <td style="text-align: center;">
-                        <div class="qty-control">
-                            <button class="qty-btn" onclick="updateStockQty(${globalIndex}, -1)">-</button>
-                            <span class="qty-number">${item.qty}</span>
-                            <button class="qty-btn" onclick="updateStockQty(${globalIndex}, 1)">+</button>
-                        </div>
+                        <span class="stock-qty-display">${item.qty} ${item.unit}</span>
                     </td>
                     <td style="text-align: right; font-weight: 500;">${item.price.toLocaleString('vi-VN')} đ</td>
-                    <td style="text-align: center;">
-                        <button class="btn btn-danger btn-sm" onclick="deleteStockItem(${globalIndex})">Xóa</button>
+                    <td style="text-align: center; position: relative;">
+                        <span class="stock-dots-btn" onclick="toggleStockDropdown(${item.id}, event)">⋮</span>
+                        
+                        <div class="stock-dropdown" id="stock-dropdown-${item.id}">
+                            <button class="menu-dropdown-item view" onclick="viewStockDetail(${item.id}, event)">👁️ Xem chi tiết</button>
+                            <button class="menu-dropdown-item edit" onclick="startEditStock(${item.id}, event)">✏️ Chỉnh sửa</button>
+                            <button class="menu-dropdown-item delete" onclick="deleteStockItem(${item.id}, event)">🗑️ Xóa NL</button>
+                        </div>
                     </td>
                 </tr>
             `;
         });
 
-        dayHTML += `</tbody></table>`;
+        dayHTML += `</tbody></table></div>`;
         stockContainer.innerHTML += dayHTML;
         
         setTimeout(() => {
@@ -436,7 +571,7 @@ function renderStock() {
     document.getElementById('totalStockValue').innerText = totalValAll.toLocaleString('vi-VN') + " đ";
 }
 
-// --- 4. BÁO CÁO DOANH THU, LỌC TỪ NGÀY ĐẾN NGÀY & IN LẠI ĐƠN CHUẨN ---
+// --- 4. BÁO CÁO DOANH THU & IN HÓA ĐƠN ---
 async function loadSalesHistoryFromSupabase() {
     const { data, error } = await db.from('sales_history').select('*').order('created_at', { ascending: false });
     if (error) console.error('Lỗi tải báo cáo:', error);
@@ -458,7 +593,7 @@ function resetDateFilter() {
 
 function toggleActionDropdown(id, event) {
     event.stopPropagation();
-    document.querySelectorAll('.menu-dropdown, .action-dropdown').forEach(el => {
+    document.querySelectorAll('.menu-dropdown, .action-dropdown, .stock-dropdown').forEach(el => {
         if (el.id !== `action-dropdown-${id}`) el.classList.remove('show');
     });
 

@@ -138,7 +138,7 @@ h2 {
 }
 
 /* Nút 3 chấm & Dropdown Popup Sửa/Xóa */
-.menu-dots-btn, .action-dots-btn {
+.menu-dots-btn, .action-dots-btn, .stock-dots-btn {
     font-size: 16px;
     color: #8e8e93;
     padding: 2px 6px;
@@ -153,7 +153,7 @@ h2 {
     right: 8px;
 }
 
-.menu-dots-btn:hover, .action-dots-btn:hover {
+.menu-dots-btn:hover, .action-dots-btn:hover, .stock-dots-btn:hover {
     background: #f5d6b3;
     color: #d35400;
 }
@@ -176,8 +176,8 @@ h2 {
     display: flex;
 }
 
-/* Popup Thao Tác Trong Báo Cáo Xổ Lên Phía Trên */
-.action-dropdown {
+/* Popup Thao Tác Trong Báo Cáo & Kho Nguyên Liệu Xổ Lên Phía Trên */
+.action-dropdown, .stock-dropdown {
     display: none;
     position: absolute;
     bottom: 25px;
@@ -192,7 +192,7 @@ h2 {
     flex-direction: column;
 }
 
-.action-dropdown.show {
+.action-dropdown.show, .stock-dropdown.show {
     display: flex;
 }
 
@@ -250,6 +250,11 @@ h2 {
     transition: background 0.2s;
 }
 
+.day-toggle-header.stock-header {
+    background: #f8f9fa;
+    border-left-color: #34c759;
+}
+
 .day-toggle-header:active {
     background: #fde3cf;
 }
@@ -258,6 +263,14 @@ h2 {
     font-size: 12px;
     color: #8e8e93;
     margin-left: 6px;
+}
+
+/* Hiển thị số lượng nguyên liệu tĩnh */
+.stock-qty-display {
+    font-weight: bold;
+    font-size: 13px;
+    color: #2c3e50;
+    text-align: center;
 }
 
 /* Forms & Inputs */
@@ -422,7 +435,7 @@ h2 {
     cursor: pointer; 
 }
 
-/* Modal xem chi tiết đơn */
+/* Modal xem chi tiết đơn & nguyên liệu */
 .modal {
     display: none; 
     position: fixed; 

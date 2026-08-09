@@ -122,8 +122,9 @@
     <!-- TAB 3: QUẢN LÝ NGUYÊN LIỆU -->
     <div id="tab-stock" class="tab-content">
         <div class="card">
-            <h2>Nhập Nguyên Liệu Mới</h2>
+            <h2 id="stockFormTitle">Nhập Nguyên Liệu Mới</h2>
             <div class="info-form">
+                <input type="hidden" id="editStockId">
                 <div class="form-row">
                     <label for="stockDate">Ngày nhập:</label>
                     <input type="date" id="stockDate">
@@ -138,32 +139,49 @@
                 </div>
                 <div class="form-row">
                     <label for="stockQty">Số lượng:</label>
-                    <input type="number" id="stockQty" placeholder="0" min="0">
+                    <input type="number" id="stockQty" placeholder="0" min="0" step="any">
                 </div>
                 <div class="form-row">
                     <label for="stockPrice">Đơn giá nhập:</label>
                     <input type="number" id="stockPrice" placeholder="Giá nhập 1 đơn vị (đ)">
                 </div>
-                <button class="btn btn-primary" onclick="addStockItem()" style="margin-top: 4px;">Thêm Vào Kho</button>
+                <div style="display: flex; gap: 8px; margin-top: 4px;">
+                    <button class="btn btn-primary" style="flex: 1;" onclick="addStockItem()">Lưu Nguyên Liệu</button>
+                    <button class="btn btn-clear" id="btnCancelStockEdit" style="display: none; width: auto; padding: 0 16px;" onclick="cancelEditStock()">Hủy</button>
+                </div>
             </div>
         </div>
 
         <div class="card">
             <h2>Danh Sách Kho Nguyên Liệu</h2>
+
+            <!-- Lọc từ ngày đến ngày nguyên liệu -->
+            <div class="info-form" style="margin-bottom: 10px;">
+                <div class="form-row date-range-row">
+                    <input type="date" id="stockFilterStartDate" onchange="renderStock()" title="Từ ngày">
+                    <span style="font-weight: bold; color: #7f8c8d;">➔</span>
+                    <input type="date" id="stockFilterEndDate" onchange="renderStock()" title="Đến ngày">
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-primary btn-sm" style="flex: 1;" onclick="setTodayStockFilter()">Hôm nay</button>
+                    <button class="btn btn-clear btn-sm" style="width: auto; padding: 0 12px;" onclick="resetStockDateFilter()">Tất cả</button>
+                </div>
+            </div>
+
             <div class="summary-box" style="margin-bottom: 10px;">
                 <div class="summary-item">
-                    <span>Tổng giá trị kho nguyên liệu:</span>
+                    <span>Tổng giá trị kho lọc được:</span>
                     <span id="totalStockValue">0 đ</span>
                 </div>
             </div>
 
-            <div style="max-height: 400px; overflow-y: auto;">
-                <div id="stockContainer">Đang tải dữ liệu kho...</div>
+            <div style="max-height: 400px; overflow-y: auto;" id="stockContainer">
+                Đang tải dữ liệu kho...
             </div>
         </div>
     </div>
 
-    <!-- TAB 4: BÁO CÁO DOANH THU CÓ BỘ LỌC TỪ NGÀY ĐẾN NGÀY (TRÊN 1 DÒNG) -->
+    <!-- TAB 4: BÁO CÁO DOANH THU CÓ BỘ LỌC TỪ NGÀY ĐẾN NGÀY -->
     <div id="tab-report" class="tab-content">
         <div class="card">
             <h2>
@@ -218,6 +236,15 @@
             <tbody id="modalOrderItemsBody"></tbody>
         </table>
         <div id="modalOrderTotal" style="text-align: right; font-weight: bold; font-size: 15px; color: #c0392b; margin-top: 8px;"></div>
+    </div>
+</div>
+
+<!-- Modal Popup Xem Chi Tiết Nguyên Liệu -->
+<div id="stockDetailModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeStockDetailModal()">&times;</span>
+        <h2 style="font-size: 16px; color: #27ae60; border-bottom: 1px solid #eee; padding-bottom: 8px;">Chi Tiết Nguyên Liệu</h2>
+        <div id="modalStockInfo" style="font-size: 13px; margin: 12px 0; line-height: 1.6; background: #f8f9fa; padding: 12px; border-radius: 8px;"></div>
     </div>
 </div>
 
