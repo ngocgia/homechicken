@@ -3,96 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Home Chicken - POS Supabase</title>
-    <!-- Thư viện Supabase CDN -->
+    <title>Home Chicken - POS Mobile</title>
+    <!-- Thư viện Supabase JS SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
-        body { background: #f2f2f7; padding-bottom: 75px; color: #1c1c1e; }
-        
-        .header { background: #d35400; color: #fff; padding: 14px 16px; text-align: center; font-size: 18px; font-weight: bold; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
-        .container { padding: 12px; max-width: 600px; margin: 0 auto; }
-        
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-
-        .card { background: #fff; padding: 14px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 14px; }
-        h2 { font-size: 16px; margin-bottom: 10px; color: #d35400; border-bottom: 2px solid #f39c12; padding-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
-
-        /* Search Box */
-        .search-box { display: flex; align-items: center; position: relative; margin-bottom: 5px; }
-        .search-input { width: 100%; padding: 12px 14px 12px 38px; border: 1px solid #c7c7cc; border-radius: 10px; font-size: 15px; outline: none; background: #f2f2f7; transition: 0.2s; }
-        .search-input:focus { background: #fff; border-color: #d35400; box-shadow: 0 0 0 3px rgba(211, 84, 0, 0.15); }
-        .search-icon { position: absolute; left: 12px; font-size: 16px; color: #8e8e93; pointer-events: none; }
-
-        .category-title { font-weight: bold; font-size: 14px; color: #2c3e50; margin: 14px 0 6px 0; padding-left: 6px; border-left: 4px solid #d35400; }
-        .menu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-        .menu-item { background: #fff8f0; border: 1px solid #f5d6b3; border-radius: 10px; padding: 12px 8px; text-align: center; cursor: pointer; }
-        .menu-item:active { background: #d35400; color: white; }
-        .menu-item .name { font-size: 13px; font-weight: 600; line-height: 1.2; }
-        .menu-item .price { font-size: 13px; font-weight: bold; color: #e67e22; margin-top: 4px; }
-        .menu-item:active .price { color: #fff; }
-
-        .info-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-        .form-row { display: flex; align-items: center; gap: 8px; }
-        .form-row label { font-weight: bold; font-size: 13px; width: 85px; white-space: nowrap; color: #2c3e50; }
-        .form-row input, .form-row select { flex: 1; padding: 9px 10px; border: 1px solid #c7c7cc; border-radius: 8px; font-size: 13px; outline: none; background: #fff; }
-        .form-row input:focus, .form-row select:focus { border-color: #d35400; }
-
-        .bill-table, .report-table, .stock-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; table-layout: fixed; }
-        .bill-table th, .bill-table td, .report-table th, .report-table td, .stock-table th, .stock-table td { padding: 10px 4px; border-bottom: 1px solid #e5e5ea; font-size: 13px; vertical-align: middle; }
-        .bill-table th, .report-table th, .stock-table th { background: #f2f2f7; font-weight: 600; }
-        
-        .col-name { width: 34%; text-align: left; font-weight: 500; }
-        .col-qty { width: 24%; text-align: center; }
-        .col-price { width: 20%; text-align: right; font-weight: 600; }
-        .col-note { width: 22%; text-align: center; }
-
-        .qty-control { display: inline-flex; align-items: center; justify-content: center; gap: 3px; }
-        .qty-btn { width: 28px; height: 28px; border: 1px solid #c7c7cc; background: #f2f2f7; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; }
-        .qty-number { font-weight: bold; min-width: 16px; text-align: center; font-size: 14px; }
-
-        .note-input { width: 100%; padding: 6px; border: 1px solid #d1d1d6; border-radius: 6px; font-size: 11px; outline: none; }
-        
-        .total-summary { text-align: right; margin: 10px 0; font-size: 14px; }
-        .total-summary .sub-total { color: #7f8c8d; margin-bottom: 4px; }
-        .total-summary .discount-val { color: #e67e22; margin-bottom: 4px; }
-        .total-summary .final-total { font-size: 18px; font-weight: bold; color: #c0392b; }
-
-        .btn { padding: 12px 14px; border: none; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; text-align: center; }
-        .btn-bt { background: #007aff; color: #fff; width: 100%; font-size: 15px; margin-bottom: 8px; }
-        .btn-primary { background: #d35400; color: #fff; }
-        .btn-print { background: #34c759; color: #fff; width: 100%; font-size: 16px; }
-        .btn-clear { background: #ff3b30; color: #fff; width: 100%; font-size: 14px; }
-        .btn-danger { background: #ff3b30; color: #fff; }
-        .btn-sm { padding: 6px 10px; font-size: 11px; border-radius: 6px; }
-
-        .summary-box { background: #e8f8f5; border: 1px solid #a3e4d7; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
-        .summary-item { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px; }
-        .summary-item:last-child { margin-bottom: 0; font-weight: bold; color: #27ae60; font-size: 16px; }
-
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: #fff; border-top: 1px solid #d1d1d6; display: flex; justify-content: space-around; align-items: center; z-index: 200; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
-        .nav-item { flex: 1; text-align: center; color: #8e8e93; font-size: 10px; font-weight: 500; padding: 6px 0; text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-        .nav-item.active { color: #d35400; font-weight: bold; }
-        .nav-icon { font-size: 17px; }
-
-        .cart-sticky-bar { position: fixed; bottom: 65px; left: 12px; right: 12px; background: #2c3e50; color: white; border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 150; cursor: pointer; }
-
-        #receipt-print { display: none; }
-        @media print {
-            @page { size: auto; margin: 0mm; }
-            body { margin: 0; padding: 0; background: #fff; }
-            body * { visibility: hidden; }
-            #receipt-print, #receipt-print * { visibility: visible; }
-            #receipt-print { display: block !important; position: absolute; left: 0; top: 0; width: 100%; padding: 5px; font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #000; }
-            .receipt-header, .receipt-footer { text-align: center; margin-bottom: 6px; }
-            .receipt-table { width: 100%; border-collapse: collapse; margin: 6px 0; }
-            .receipt-table th, .receipt-table td { text-align: left; padding: 2px 0; font-size: 11px; vertical-align: top; }
-            .receipt-table .num { text-align: right; }
-            .receipt-note { font-size: 10px; font-style: italic; color: #333; padding-left: 5px; }
-            .line { border-bottom: 1px dashed #000; margin: 4px 0; }
-        }
-    </style>
+    <!-- File CSS riêng -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -102,16 +17,43 @@
     <!-- TAB 1: THỰC ĐƠN -->
     <div id="tab-menu" class="tab-content active">
         <div class="card">
-            <h2>Tìm Món Nhanh</h2>
+            <h2>
+                <span>Tìm Món Nhanh</span>
+                <button class="btn btn-primary btn-sm" onclick="toggleMenuManager()">⚙️ Quản lý Thực đơn</button>
+            </h2>
             <div class="search-box">
                 <span class="search-icon">🔍</span>
                 <input type="text" id="searchInput" class="search-input" placeholder="Nhập tên món (vd: gà, tok, ship...)" oninput="filterMenu()">
             </div>
         </div>
 
+        <!-- Khung Quản lý Thực đơn (Ẩn/Hiện khi bấm nút) -->
+        <div class="card" id="menuManagerBox" style="display: none; border: 2px solid #d35400;">
+            <h2 id="menuFormTitle">Thêm Món Mới</h2>
+            <div class="info-form">
+                <input type="hidden" id="editMenuId">
+                <div class="form-row">
+                    <label for="menuCategoryInput">Danh mục:</label>
+                    <input type="text" id="menuCategoryInput" placeholder="Vd: Gà Viên Sốt, Tokbokki, Món Thêm...">
+                </div>
+                <div class="form-row">
+                    <label for="menuNameInput">Tên món:</label>
+                    <input type="text" id="menuNameInput" placeholder="Tên món ăn">
+                </div>
+                <div class="form-row">
+                    <label for="menuPriceInput">Giá bán:</label>
+                    <input type="number" id="menuPriceInput" placeholder="Giá bán (đ)">
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 4px;">
+                    <button class="btn btn-primary" style="flex: 1;" onclick="saveMenuItem()">Lưu Món</button>
+                    <button class="btn btn-clear" style="width: auto; padding: 0 16px;" onclick="cancelEditMenu()">Hủy</button>
+                </div>
+            </div>
+        </div>
+
         <div class="card">
             <h2>Thực Đơn (Chạm để chọn món)</h2>
-            <div id="menuContainer">Loading Supabase Data...</div>
+            <div id="menuContainer">Đang tải dữ liệu thực đơn...</div>
         </div>
     </div>
 
@@ -218,7 +160,7 @@
             </div>
 
             <div style="max-height: 400px; overflow-y: auto;">
-                <div id="stockContainer">Loading Kho Supabase...</div>
+                <div id="stockContainer">Đang tải dữ liệu kho...</div>
             </div>
         </div>
     </div>
@@ -260,11 +202,13 @@
     </div>
 </div>
 
+<!-- Thanh xem nhanh giỏ hàng -->
 <div id="cartStickyBar" class="cart-sticky-bar" style="display: none;" onclick="switchTab('cart')">
     <span>🛒 <span id="stickyQty">0</span> món</span>
     <span>Xem hóa đơn (<span id="stickyTotal">0</span> đ) ➔</span>
 </div>
 
+<!-- Thanh điều hướng đáy 4 Tab -->
 <div class="bottom-nav">
     <div class="nav-item active" id="nav-menu" onclick="switchTab('menu')">
         <div class="nav-icon">📖</div>
@@ -284,7 +228,7 @@
     </div>
 </div>
 
-<!-- Mẫu hóa đơn xem trước in -->
+<!-- Mẫu hóa đơn xem trước khi in -->
 <div id="receipt-print">
     <div class="receipt-header">
         <h2 style="font-size: 16px;">HOME CHICKEN</h2>
@@ -321,651 +265,6 @@
     </div>
 </div>
 
-<script>
-    // =========================================================================
-    // ⚙️ CẤU HÌNH SUPABASE (ĐIỀN CẢ BỘ THÔNG TIN CỦA BẠN VÀO ĐÂY)
-    // =========================================================================
-    const SUPABASE_URL = 'https://pxixtrwfvyzlvfnkszrm.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_mbWkuvRJYm0U1u5Ngfkulw_W_wVVS-o';
-    
-    // Khởi tạo Supabase Client
-    const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    const defaultMenu = [
-        { category: "Gà Viên Sốt", name: "Gà Viên Sốt Cay Ngọt", price: 40000 },
-        { category: "Gà Viên Sốt", name: "Gà Viên Sốt Chua Ngọt", price: 40000 },
-        { category: "Gà Viên Sốt", name: "Gà Viên Sốt Phô Mai", price: 40000 },
-        { category: "Gà Viên Sốt", name: "Gà Viên Sốt Kem", price: 40000 },
-        { category: "Gà Viên Sốt", name: "Gà Viên Sốt Mắm Tỏi", price: 40000 },
-        { category: "Gà Viên Sốt", name: "Gà Viên Sốt Tương Tỏi", price: 40000 },
-        { category: "Gà Viên Sốt", name: "Gà Viên Lắc Phô Mai", price: 40000 },
-        { category: "Gà Viên Sốt", name: "Gà Mix 2 Vị (M)", price: 75000 },
-        { category: "Gà Viên Sốt", name: "Gà Mix 2 Vị (L)", price: 100000 },
-        { category: "Gà Viên Sốt", name: "Gà Mix 3 Vị (M)", price: 80000 },
-        { category: "Gà Viên Sốt", name: "Gà Mix 3 Vị (L)", price: 100000 },
-        { category: "Gà Viên Sốt", name: "Gà Mix 4-5 Vị", price: 120000 },
-        { category: "Tokbokki", name: "Tok truyền thống lắc PM", price: 25000 },
-        { category: "Tokbokki", name: "Tok cheese lắc PM", price: 25000 },
-        { category: "Tokbokki", name: "Tok sốt phô mai + kem", price: 40000 },
-        { category: "Tokbokki", name: "Tok cay chả cá Hàn", price: 35000 },
-        { category: "Tokbokki", name: "Tok cay king cheese Hàn", price: 45000 },
-        { category: "Tokbokki", name: "Tok cay mixx 2 loại", price: 55000 },
-        { category: "Tokbokki", name: "Mì tok truyền thống/PM", price: 55000 },
-        { category: "Tokbokki", name: "Tok mixx gà sốt", price: 50000 },
-        { category: "Tokbokki", name: "Chả cá sốt cay (1 xiên)", price: 15000 },
-        { category: "Đồ Ăn No", name: "Mì Ý", price: 30000 },
-        { category: "Đồ Ăn No", name: "Mì Ý xúc xích", price: 37000 },
-        { category: "Đồ Ăn No", name: "Kimpap truyền thống", price: 25000 },
-        { category: "Đồ Ăn No", name: "Kimpap chiên", price: 27000 },
-        { category: "Đồ Ăn No", name: "Cơm Gà Viên Sốt", price: 37000 },
-        { category: "Đồ Ăn No", name: "Trứng cuộn rong biển", price: 20000 },
-        { category: "Mì Tương Đen", name: "Mì Tương Đen Hàn Quốc", price: 40000 },
-        { category: "Mì Tương Đen", name: "Mì Tương Đen + Mandu", price: 50000 },
-        { category: "Mì Tương Đen", name: "Mì Tương Đen + Tok/Khoai", price: 50000 },
-        { category: "Mì Tương Đen", name: "Mì Tương Đen + Gà Viên", price: 70000 },
-        { category: "Cơm Trộn", name: "Cơm trộn Xúc Xích", price: 35000 },
-        { category: "Cơm Trộn", name: "Cơm trộn Gà Viên (sốt)", price: 35000 },
-        { category: "Cơm Trộn", name: "Cơm trộn chả cá (cay)", price: 35000 },
-        { category: "Cơm Trộn", name: "Cơm trộn bò Mỹ", price: 40000 },
-        { category: "Món Ăn Vặt", name: "Khoai tây chiên", price: 20000 },
-        { category: "Món Ăn Vặt", name: "Khoai tây lắc phô mai", price: 25000 },
-        { category: "Món Ăn Vặt", name: "Xúc xích chiên (1 cây)", price: 10000 },
-        { category: "Món Ăn Vặt", name: "Mandu chiên (1 cái)", price: 10000 },
-        { category: "Món Ăn Vặt", name: "Viên Hải Sản Mayo", price: 25000 },
-        { category: "Món Ăn Vặt", name: "Phô Mai Que (1 cái)", price: 10000 },
-        { category: "Món Ăn Vặt", name: "HÁ Cảo Lắc Phô Mai", price: 40000 },
-        { category: "Món Ăn Vặt", name: "Cá/tôm/bò viên (1 xiên)", price: 5000 },
-        { category: "Combo 1-2 Người", name: "Set 1: Mì Ý - Gà Viên - Khoai Tây", price: 60000 },
-        { category: "Combo 1-2 Người", name: "Set 2: Cơm Cuộn - Gà Viên", price: 55000 },
-        { category: "Combo 1-2 Người", name: "Set 3: Mì Ý - Cơm Cuộn - Gà Viên 2 vị", price: 80000 },
-        { category: "Combo 1-2 Người", name: "Set 4: Cơm Cuộn - Gà Viên 2 vị - 2 mandu", price: 80000 },
-        { category: "Combo 1-2 Người", name: "Set 5: Cơm Cuộn - Gà Viên 2 vị - Khoai lắc", price: 80000 },
-        { category: "Combo 1-2 Người", name: "Set 6: 2 Cơm Cuộn - Gà Viên 2 vị", price: 80000 },
-        { category: "Combo 1-2 Người", name: "Set 7: Mì Ý - Gà 2 Vị - Khoai Lắc", price: 80000 },
-        { category: "Combo 1-2 Người", name: "Set 8: Mì Ý - Gà 2 Vị - 2 mandu", price: 80000 },
-        { category: "Combo 1-2 Người", name: "Set 9: Mì Ý - Gà 2 Vị - Viên hải sản", price: 80000 },
-        { category: "Combo 1-2 Người", name: "Set 10: Mì Ý - Gà 2 Vị - Tok lắc PM", price: 80000 },
-        { category: "Box & Set", name: "Box 1 (1-2 người)", price: 80000 },
-        { category: "Box & Set", name: "Box 2 (1-2 người)", price: 80000 },
-        { category: "Box & Set", name: "Box 3 (1-2 người)", price: 120000 },
-        { category: "Box & Set", name: "Box 4 (1-2 người)", price: 130000 },
-        { category: "Box & Set", name: "Box 5 (1-2 người)", price: 130000 },
-        { category: "Box & Set", name: "Couple 1 (2-3 người)", price: 135000 },
-        { category: "Box & Set", name: "Couple 2 (2-3 người)", price: 160000 },
-        { category: "Box & Set", name: "Couple 3 (2-3 người)", price: 150000 },
-        { category: "Box & Set", name: "Couple 4 (2-3 người)", price: 140000 },
-        { category: "Box & Set", name: "Couple 5 (2-3 người)", price: 145000 },
-        { category: "Combo 3-4-5", name: "COUPLE 6", price: 160000 },
-        { category: "Combo 3-4-5", name: "COUPLE 7", price: 160000 },
-        { category: "Combo 3-4-5", name: "COUPLE 8", price: 200000 },
-        { category: "Combo 3-4-5", name: "COUPLE 9", price: 250000 },
-        { category: "Món Thêm", name: "Thêm Chả Cá", price: 10000 },
-        { category: "Món Thêm", name: "Thêm Phô Mai kéo sợi", price: 10000 },
-        { category: "Món Thêm", name: "Thêm Phô Mai cheddar", price: 10000 },
-        { category: "Món Thêm", name: "Phí ship", price: 1000 }
-    ];
-
-    let menu = [];
-    let cart = [];
-    let salesHistory = [];
-    let stockList = [];
-    let bluetoothDevice = null;
-    let printCharacteristic = null;
-
-    const todayStr = new Date().toISOString().split('T')[0];
-    document.getElementById('stockDate').value = todayStr;
-
-    // --- 1. TẢI VÀ ĐỒNG BỘ THỰC ĐƠN TỪ SUPABASE ---
-    async function loadMenuFromSupabase() {
-        const { data, error } = await db.from('menu').select('*');
-        if (error) {
-            console.error('Lỗi tải menu:', error);
-            menu = defaultMenu;
-        } else if (data.length === 0) {
-            // Tự động khởi tạo menu mặc định vào Database Supabase
-            await db.from('menu').insert(defaultMenu);
-            menu = defaultMenu;
-        } else {
-            menu = data;
-        }
-        renderMenu();
-    }
-
-    // --- 2. QUẢN LÝ KHO NGUYÊN LIỆU (SUPABASE) ---
-    async function loadStockFromSupabase() {
-        const { data, error } = await db.from('stock').select('*');
-        if (error) console.error('Lỗi tải kho:', error);
-        else stockList = data || [];
-        renderStock();
-    }
-
-    async function addStockItem() {
-        const date = document.getElementById('stockDate').value || todayStr;
-        const name = document.getElementById('stockName').value.trim();
-        const unit = document.getElementById('stockUnit').value.trim() || 'đơn vị';
-        const qty = parseFloat(document.getElementById('stockQty').value) || 0;
-        const price = parseInt(document.getElementById('stockPrice').value) || 0;
-
-        if (!name) {
-            alert('Vui lòng nhập tên nguyên liệu!');
-            return;
-        }
-
-        const newItem = { id: Date.now(), date, name, unit, qty, price };
-        const { error } = await db.from('stock').insert([newItem]);
-        if (error) {
-            alert('Lỗi lưu Supabase: ' + error.message);
-        } else {
-            stockList.push(newItem);
-            document.getElementById('stockName').value = '';
-            document.getElementById('stockUnit').value = '';
-            document.getElementById('stockQty').value = '';
-            document.getElementById('stockPrice').value = '';
-            renderStock();
-        }
-    }
-
-    async function updateStockQty(index, delta) {
-        stockList[index].qty += delta;
-        if (stockList[index].qty < 0) stockList[index].qty = 0;
-
-        const { error } = await db.from('stock').update({ qty: stockList[index].qty }).eq('id', stockList[index].id);
-        if (error) console.error(error);
-        renderStock();
-    }
-
-    async function deleteStockItem(index) {
-        if (confirm('Bạn có chắc muốn xóa nguyên liệu này khỏi kho?')) {
-            const { error } = await db.from('stock').delete().eq('id', stockList[index].id);
-            if (!error) {
-                stockList.splice(index, 1);
-                renderStock();
-            }
-        }
-    }
-
-    function renderStock() {
-        const stockContainer = document.getElementById('stockContainer');
-        stockContainer.innerHTML = '';
-        let totalValAll = 0;
-
-        const dates = [...new Set(stockList.map(item => item.date || todayStr))].sort().reverse();
-
-        if (dates.length === 0) {
-            stockContainer.innerHTML = '<div style="text-align: center; color: #8e8e93; padding: 15px;">Chưa có nguyên liệu nào trong kho!</div>';
-            document.getElementById('totalStockValue').innerText = "0 đ";
-            return;
-        }
-
-        dates.forEach(d => {
-            const itemsInDate = stockList.filter(item => (item.date || todayStr) === d);
-            let dayTotal = 0;
-
-            const dateParts = d.split('-');
-            const displayDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
-
-            let dayHTML = `
-                <div style="background: #f8f9fa; padding: 6px 10px; border-radius: 6px; margin: 10px 0 4px 0; font-weight: bold; font-size: 13px; display: flex; justify-content: space-between; border-left: 3px solid #34c759;">
-                    <span>📅 Ngày: ${displayDate}</span>
-                    <span id="dayTotal-${d}" style="color: #27ae60;">0 đ</span>
-                </div>
-                <table class="stock-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 32%;">Tên NL</th>
-                            <th style="width: 28%; text-align: center;">Tồn kho</th>
-                            <th style="width: 25%; text-align: right;">Giá nhập</th>
-                            <th style="width: 15%; text-align: center;">Xóa</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-
-            itemsInDate.forEach(item => {
-                const globalIndex = stockList.findIndex(s => s.id === item.id);
-                const itemTotal = item.qty * item.price;
-                dayTotal += itemTotal;
-                totalValAll += itemTotal;
-
-                dayHTML += `
-                    <tr>
-                        <td>
-                            <div><b>${item.name}</b></div>
-                            <div style="font-size: 10px; color: #7f8c8d;">ĐVT: ${item.unit}</div>
-                        </td>
-                        <td style="text-align: center;">
-                            <div class="qty-control">
-                                <button class="qty-btn" onclick="updateStockQty(${globalIndex}, -1)">-</button>
-                                <span class="qty-number">${item.qty}</span>
-                                <button class="qty-btn" onclick="updateStockQty(${globalIndex}, 1)">+</button>
-                            </div>
-                        </td>
-                        <td style="text-align: right; font-weight: 500;">${item.price.toLocaleString('vi-VN')} đ</td>
-                        <td style="text-align: center;">
-                            <button class="btn btn-danger btn-sm" onclick="deleteStockItem(${globalIndex})">Xóa</button>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            dayHTML += `</tbody></table>`;
-            stockContainer.innerHTML += dayHTML;
-            
-            setTimeout(() => {
-                const dayElem = document.getElementById(`dayTotal-${d}`);
-                if (dayElem) dayElem.innerText = "Tổng: " + dayTotal.toLocaleString('vi-VN') + " đ";
-            }, 10);
-        });
-
-        document.getElementById('totalStockValue').innerText = totalValAll.toLocaleString('vi-VN') + " đ";
-    }
-
-    // --- 3. BÁO CÁO DOANH THU & IN HÓA ĐƠN (SUPABASE) ---
-    async function loadSalesHistoryFromSupabase() {
-        const { data, error } = await db.from('sales_history').select('*');
-        if (error) console.error('Lỗi tải báo cáo:', error);
-        else salesHistory = data || [];
-        renderHistory();
-    }
-
-    async function printReceipt() {
-        if (cart.length === 0) {
-            alert('Chưa có món nào trong hóa đơn!');
-            return;
-        }
-
-        const orderType = document.getElementById('orderType').value;
-        const customerName = document.getElementById('customerName').value.trim() || 'Khách vãng lai';
-        const customerPhone = document.getElementById('customerPhone').value.trim();
-        const customerAddress = document.getElementById('customerAddress').value.trim();
-        const pickupTime = document.getElementById('pickupTime').value;
-
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-
-        let subtotalTotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-        let discountPercent = parseFloat(document.getElementById('discountInput').value) || 0;
-        const discountAmount = Math.round((subtotalTotal * discountPercent) / 100);
-        const finalTotal = subtotalTotal - discountAmount;
-
-        const orderRecord = {
-            id: Date.now(),
-            time: timeStr,
-            type: orderType,
-            customer: customerName,
-            phone: customerPhone,
-            address: orderType === 'SHIP MANG VỀ' ? customerAddress : '',
-            pickup_time: orderType === 'KHÁCH TỚI LẤY' ? pickupTime : '',
-            subtotal: subtotalTotal,
-            discount_percent: discountPercent,
-            discount_amount: discountAmount,
-            total: finalTotal,
-            items: cart
-        };
-
-        // Lưu bản ghi hóa đơn lên Supabase
-        const { error } = await db.from('sales_history').insert([orderRecord]);
-        if (error) console.error('Lỗi lưu đơn hàng:', error);
-        else salesHistory.push(orderRecord);
-
-        let printText = `    HOME CHICKEN\n01 Cao Thang - Quang Ngai\nDT: 0392 375 906\n--------------------------------\n[ ${orderType} ]\nKhach: ${customerName}\n`;
-        if (customerPhone) printText += `SDT: ${customerPhone}\n`;
-        if (orderType === 'SHIP MANG VỀ' && customerAddress) {
-            printText += `DC: ${customerAddress}\n`;
-        } else if (orderType === 'KHÁCH TỚI LẤY' && pickupTime) {
-            printText += `Gio hen lay: ${pickupTime}\n`;
-        }
-        printText += `--------------------------------\n`;
-
-        cart.forEach(item => {
-            const subtotal = item.price * item.qty;
-            printText += `${item.name}\n  ${item.qty} x ${item.price.toLocaleString('vi-VN')} = ${subtotal.toLocaleString('vi-VN')} d\n`;
-            if (item.note && item.note.trim() !== '') {
-                printText += `  * Note: ${item.note.trim()}\n`;
-            }
-        });
-
-        if (discountPercent > 0) {
-            printText += `--------------------------------\nTam tinh: ${subtotalTotal.toLocaleString('vi-VN')} d\nGiam gia (${discountPercent}%): -${discountAmount.toLocaleString('vi-VN')} d\n`;
-        }
-
-        printText += `--------------------------------\nTONG CONG: ${finalTotal.toLocaleString('vi-VN')} d\n--------------------------------\n  Cam on quy khach & Hen gap lai!\n\n\n`;
-
-        document.getElementById('printOrderType').innerText = "[ " + orderType + " ]";
-        let infoHTML = `<b>Khách:</b> ${customerName}<br>`;
-        if (customerPhone) infoHTML += `<b>SĐT:</b> ${customerPhone}<br>`;
-        if (orderType === 'SHIP MANG VỀ' && customerAddress) {
-            infoHTML += `<b>Địa chỉ ship:</b> ${customerAddress}<br>`;
-        } else if (orderType === 'KHÁCH TỚI LẤY' && pickupTime) {
-            infoHTML += `<b>Giờ tới lấy:</b> ${pickupTime}<br>`;
-        }
-        
-        document.getElementById('printCustomerInfo').innerHTML = infoHTML;
-
-        const printBody = document.getElementById('printBody');
-        printBody.innerHTML = '';
-
-        cart.forEach(item => {
-            const subtotal = item.price * item.qty;
-            let rowHTML = `
-                <tr>
-                    <td>${item.name}</td>
-                    <td class="num">${item.qty}</td>
-                    <td class="num">${subtotal.toLocaleString('vi-VN')}</td>
-                </tr>
-            `;
-            if (item.note && item.note.trim() !== '') {
-                rowHTML += `<tr><td colspan="3" class="receipt-note">└> Ghi chú: ${item.note.trim()}</td></tr>`;
-            }
-            printBody.innerHTML += rowHTML;
-        });
-
-        const printDiscountBlock = document.getElementById('printDiscountBlock');
-        if (discountPercent > 0) {
-            document.getElementById('printSubTotal').innerText = subtotalTotal.toLocaleString('vi-VN');
-            document.getElementById('printDiscountPercent').innerText = discountPercent;
-            document.getElementById('printDiscountVal').innerText = discountAmount.toLocaleString('vi-VN');
-            printDiscountBlock.style.display = 'block';
-        } else {
-            printDiscountBlock.style.display = 'none';
-        }
-
-        document.getElementById('printTotal').innerText = finalTotal.toLocaleString('vi-VN');
-
-        await printBluetooth(printText);
-
-        clearCart();
-        renderHistory();
-        switchTab('menu');
-    }
-
-    function renderHistory() {
-        const historyBody = document.getElementById('historyBody');
-        historyBody.innerHTML = '';
-
-        let grandTotalDaily = 0;
-        const reversedHistory = [...salesHistory].reverse();
-
-        reversedHistory.forEach((order) => {
-            grandTotalDaily += order.total;
-            let subDetail = order.type || '';
-            if (order.pickup_time) subDetail += ` (${order.pickup_time})`;
-
-            historyBody.innerHTML += `
-                <tr>
-                    <td><b>${order.time}</b></td>
-                    <td>
-                        <div><b>${order.customer}</b></div>
-                        <div style="font-size: 10px; color: #7f8c8d;">${subDetail}</div>
-                    </td>
-                    <td style="text-align: right; font-weight: bold; color: #d35400;">${order.total.toLocaleString('vi-VN')} đ</td>
-                    <td style="text-align: center;">
-                        <button class="btn btn-danger btn-sm" onclick="deleteOrder(${order.id})">Xóa</button>
-                    </td>
-                </tr>
-            `;
-        });
-
-        document.getElementById('dailyOrderCount').innerText = salesHistory.length + " đơn";
-        document.getElementById('dailyTotalAmount').innerText = grandTotalDaily.toLocaleString('vi-VN') + " đ";
-    }
-
-    async function deleteOrder(orderId) {
-        if (confirm('Bạn có chắc muốn xóa hóa đơn này khỏi Supabase?')) {
-            const { error } = await db.from('sales_history').delete().eq('id', orderId);
-            if (!error) {
-                salesHistory = salesHistory.filter(o => o.id !== orderId);
-                renderHistory();
-            }
-        }
-    }
-
-    async function resetDailySales() {
-        if (confirm('Bạn có chắc muốn xóa TOÀN BỘ lịch sử đơn hàng trên Supabase để bắt đầu ngày làm việc mới?')) {
-            const { error } = await db.from('sales_history').delete().neq('id', 0);
-            if (!error) {
-                salesHistory = [];
-                renderHistory();
-            }
-        }
-    }
-
-    // --- CÁC HÀM BỔ TRỢ GIAO DIỆN ---
-    function toggleOrderFields() {
-        const orderType = document.getElementById('orderType').value;
-        const addressRow = document.getElementById('addressRow');
-        const pickupTimeRow = document.getElementById('pickupTimeRow');
-
-        if (orderType === 'SHIP MANG VỀ') {
-            addressRow.style.display = 'flex';
-            pickupTimeRow.style.display = 'none';
-        } else {
-            addressRow.style.display = 'none';
-            pickupTimeRow.style.display = 'flex';
-        }
-    }
-
-    function removeVietnameseTones(str) {
-        return str.normalize('NFD')
-                  .replace(/[\u0300-\u036f]/g, '')
-                  .replace(/đ/g, 'd').replace(/Đ/g, 'D')
-                  .toLowerCase();
-    }
-
-    function filterMenu() {
-        const keyword = removeVietnameseTones(document.getElementById('searchInput').value.trim());
-        const filteredMenu = menu.filter(item => removeVietnameseTones(item.name).includes(keyword));
-        renderMenu(filteredMenu);
-    }
-
-    function renderMenu(itemsToRender = menu) {
-        const menuContainer = document.getElementById('menuContainer');
-        menuContainer.innerHTML = '';
-
-        if (itemsToRender.length === 0) {
-            menuContainer.innerHTML = '<div style="text-align: center; color: #8e8e93; padding: 20px;">Không tìm thấy món ăn phù hợp!</div>';
-            return;
-        }
-
-        const categories = [...new Set(itemsToRender.map(item => item.category || "Khác"))];
-
-        categories.forEach(cat => {
-            let catHTML = `<div class="category-title">${cat}</div><div class="menu-grid">`;
-            const items = itemsToRender.filter(item => (item.category || "Khác") === cat);
-
-            items.forEach(item => {
-                const originalIndex = menu.findIndex(m => m.name === item.name);
-                catHTML += `
-                    <div class="menu-item" onclick="addToCart(${originalIndex})">
-                        <div class="name">${item.name}</div>
-                        <div class="price">${item.price.toLocaleString('vi-VN')} đ</div>
-                    </div>
-                `;
-            });
-            catHTML += `</div>`;
-            menuContainer.innerHTML += catHTML;
-        });
-    }
-
-    async function connectBluetooth() {
-        if (!navigator.bluetooth) {
-            alert('Trình duyệt chưa hỗ trợ Web Bluetooth trực tiếp. Trên iPhone, bạn dùng máy in qua AirPrint hoặc tải trình duyệt "Blueify".');
-            return;
-        }
-
-        try {
-            bluetoothDevice = await navigator.bluetooth.requestDevice({
-                acceptAllDevices: true,
-                optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '49535343-fe7d-4113-a44d-42580275f783']
-            });
-
-            const server = await bluetoothDevice.gatt.connect();
-            const services = await server.getPrimaryServices();
-            
-            for (let service of services) {
-                const characteristics = await service.getCharacteristics();
-                for (let c of characteristics) {
-                    if (c.properties.write || c.properties.writeWithoutResponse) {
-                        printCharacteristic = c;
-                        break;
-                    }
-                }
-            }
-
-            if (printCharacteristic) {
-                alert('Đã kết nối thành công với máy in: ' + bluetoothDevice.name);
-            } else {
-                alert('Kết nối thành công nhưng không tìm thấy cổng in!');
-            }
-        } catch (error) {
-            console.error(error);
-            alert('Lỗi kết nối Bluetooth: ' + error.message);
-        }
-    }
-
-    async function printBluetooth(textData) {
-        if (!printCharacteristic) {
-            window.print();
-            return;
-        }
-
-        try {
-            const encoder = new TextEncoder();
-            const initCmd = new Uint8Array([0x1B, 0x40]);
-            const cutCmd = new Uint8Array([0x1D, 0x56, 0x41, 0x00]);
-            
-            await printCharacteristic.writeValue(initCmd);
-            
-            const data = encoder.encode(textData);
-            const CHUNK_SIZE = 50;
-            for (let i = 0; i < data.length; i += CHUNK_SIZE) {
-                const chunk = data.slice(i, i + CHUNK_SIZE);
-                await printCharacteristic.writeValue(chunk);
-            }
-
-            await printCharacteristic.writeValue(cutCmd);
-        } catch (err) {
-            alert('Không thể gửi lệnh in Bluetooth: ' + err.message);
-            window.print();
-        }
-    }
-
-    function switchTab(tabName) {
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-
-        document.getElementById('tab-' + tabName).classList.add('active');
-        document.getElementById('nav-' + tabName).classList.add('active');
-
-        const stickyBar = document.getElementById('cartStickyBar');
-        if (tabName === 'menu' && cart.length > 0) {
-            stickyBar.style.display = 'flex';
-        } else {
-            stickyBar.style.display = 'none';
-        }
-    }
-
-    function addToCart(index) {
-        const item = menu[index];
-        const existing = cart.find(c => c.name === item.name);
-
-        if (existing) {
-            existing.qty += 1;
-        } else {
-            cart.push({ ...item, qty: 1, note: '' });
-        }
-        renderCart();
-    }
-
-    function updateQty(index, delta) {
-        cart[index].qty += delta;
-        if (cart[index].qty <= 0) {
-            cart.splice(index, 1);
-        }
-        renderCart();
-    }
-
-    function updateNote(index, value) {
-        cart[index].note = value;
-    }
-
-    function clearCart() {
-        cart = [];
-        document.getElementById('customerName').value = '';
-        document.getElementById('customerPhone').value = '';
-        document.getElementById('customerAddress').value = '';
-        document.getElementById('pickupTime').value = '';
-        document.getElementById('discountInput').value = '';
-        renderCart();
-    }
-
-    function renderCart() {
-        const cartBody = document.getElementById('cartBody');
-        cartBody.innerHTML = '';
-        let subtotalTotal = 0;
-        let totalQty = 0;
-
-        cart.forEach((item, index) => {
-            const subtotal = item.price * item.qty;
-            subtotalTotal += subtotal;
-            totalQty += item.qty;
-
-            cartBody.innerHTML += `
-                <tr>
-                    <td class="col-name">${item.name}</td>
-                    <td class="col-qty">
-                        <div class="qty-control">
-                            <button class="qty-btn" onclick="updateQty(${index}, -1)">-</button>
-                            <span class="qty-number">${item.qty}</span>
-                            <button class="qty-btn" onclick="updateQty(${index}, 1)">+</button>
-                        </div>
-                    </td>
-                    <td class="col-price">${subtotal.toLocaleString('vi-VN')}</td>
-                    <td class="col-note">
-                        <input type="text" class="note-input" placeholder="Ghi chú..." value="${item.note || ''}" onchange="updateNote(${index}, this.value)">
-                    </td>
-                </tr>
-            `;
-        });
-
-        let discountPercent = parseFloat(document.getElementById('discountInput').value) || 0;
-        if (discountPercent < 0) discountPercent = 0;
-        if (discountPercent > 100) discountPercent = 100;
-
-        const discountAmount = Math.round((subtotalTotal * discountPercent) / 100);
-        const finalTotal = subtotalTotal - discountAmount;
-
-        const uiSubTotalRow = document.getElementById('uiSubTotalRow');
-        const uiDiscountRow = document.getElementById('uiDiscountRow');
-
-        if (discountPercent > 0) {
-            uiSubTotalRow.style.display = 'block';
-            uiDiscountRow.style.display = 'block';
-            document.getElementById('subTotal').innerText = subtotalTotal.toLocaleString('vi-VN');
-            document.getElementById('discountPercent').innerText = discountPercent;
-            document.getElementById('discountAmount').innerText = discountAmount.toLocaleString('vi-VN');
-        } else {
-            uiSubTotalRow.style.display = 'none';
-            uiDiscountRow.style.display = 'none';
-        }
-
-        document.getElementById('grandTotal').innerText = finalTotal.toLocaleString('vi-VN');
-        document.getElementById('stickyQty').innerText = totalQty;
-        document.getElementById('stickyTotal').innerText = finalTotal.toLocaleString('vi-VN');
-
-        const activeTab = document.querySelector('.tab-content.active').id;
-        if (activeTab === 'tab-menu' && cart.length > 0) {
-            document.getElementById('cartStickyBar').style.display = 'flex';
-        } else {
-            document.getElementById('cartStickyBar').style.display = 'none';
-        }
-    }
-
-    // --- KHỞI TẠO DỮ LIỆU TỪ SUPABASE KHI MỞ ỨNG DỤNG ---
-    loadMenuFromSupabase();
-    loadStockFromSupabase();
-    loadSalesHistoryFromSupabase();
-</script>
-
+<script src="app.js"></script>
 </body>
 </html>
