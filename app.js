@@ -77,7 +77,7 @@ const defaultMenu = [
     { category: "Món Thêm", name: "Thêm Chả Cá", price: 10000 },
     { category: "Món Thêm", name: "Thêm Phô Mai kéo sợi", price: 10000 },
     { category: "Món Thêm", name: "Thêm Phô Mai cheddar", price: 10000 },
-    { category: "Món Thêm", name: "Phí ship", price: 1000 }
+    { category: "Khác", name: "Phí ship", price: 1000 }
 ];
 
 let menu = [];
@@ -86,7 +86,8 @@ let salesHistory = [];
 let stockList = [];
 let bluetoothDevice = null;
 let printCharacteristic = null;
-let editingOrderId = null; // Biến ghi nhớ ID đơn hàng đang được sửa
+let editingOrderId = null; 
+let topItemsChartInstance = null; // Biến giữ đối tượng biểu đồ Chart.js
 
 const todayStr = new Date().toISOString().split('T')[0];
 
@@ -312,7 +313,7 @@ function renderCart() {
     }
 }
 
-// --- 3. QUẢN LÝ KHO NGUYÊN LIỆU (LỌC, ẨN/HIỆN NGÀY & SỬA/XÓA/XEM - SỐ LƯỢNG TĨNH) ---
+// --- 3. QUẢN LÝ KHO NGUYÊN LIỆU ---
 async function loadStockFromSupabase() {
     const { data, error } = await db.from('stock').select('*').order('date', { ascending: false });
     if (error) console.error('Lỗi tải kho:', error);
@@ -572,7 +573,7 @@ function renderStock() {
     document.getElementById('totalStockValue').innerText = totalValAll.toLocaleString('vi-VN') + " đ";
 }
 
-// --- 4. BÁO CÁO DOANH THU & IN HÓA ĐƠN ---
+// --- 4. BÁO CÁO DOANH THU & VẼ BIỂU ĐỒ TOP 10 MÓN BÁN CHẠY (LOẠI BỎ MỤC KHÁC) ---
 async function loadSalesHistoryFromSupabase() {
     const { data, error } = await db.from('sales_history').select('*').order('created_at', { ascending: false });
     if (error) console.error('Lỗi tải báo cáo:', error);
@@ -747,7 +748,7 @@ function editOrder(orderId) {
     if (!order) return;
 
     if (confirm(`Bạn có muốn nạp đơn hàng của khách "${order.customer}" vào giỏ để chỉnh sửa không?`)) {
-        editingOrderId = order.id; // Ghi nhớ ID của đơn hàng đang sửa
+        editingOrderId = order.id;
         
         cart = JSON.parse(JSON.stringify(order.items || []));
         document.getElementById('orderType').value = order.type || 'SHIP MANG VỀ';
@@ -761,6 +762,98 @@ function editOrder(orderId) {
         renderCart();
         switchTab('cart');
     }
+}
+
+// 📊 HÀM TÍNH TOÁN VÀ VẼ BIỂU ĐỒ TOP 10 MÓN BÁN CHẠY
+function renderTopItemsChart(filteredOrders) {
+    const itemQtyMap = {};
+
+    // Danh sách tên các món thuộc danh mục "Khác" để loại bỏ
+    const otherCategoryItemNames = menu
+        .filter(m => (m.category || "Khác") === "Khác")
+        .map(m => m.name.toLowerCase().trim());
+
+    filteredOrders.forEach(order => {
+        if (order.items && Array.isArray(order.items)) {
+            order.items.forEach(item => {
+                const itemNameTrim = (item.name || '').trim();
+                const itemNameLower = itemNameTrim.toLowerCase();
+
+                // Bỏ qua nếu món thuộc danh mục "Khác" (Ví dụ: Phí ship, phụ thu)
+                if (otherCategoryItemNames.includes(itemNameLower) || itemNameLower === 'phí ship') {
+                    return;
+                }
+
+                if (!itemQtyMap[itemNameTrim]) {
+                    itemQtyMap[itemNameTrim] = 0;
+                }
+                itemQtyMap[itemNameTrim] += (item.qty || 0);
+            });
+        }
+    });
+
+    // Sắp xếp giảm dần theo số lượng bán ra
+    const sortedItems = Object.keys(itemQtyMap)
+        .map(name => ({ name, qty: itemQtyMap[name] }))
+        .sort((a, b) => b.qty - a.qty)
+        .slice(0, 10); // Lấy Top 10 món
+
+    const labels = sortedItems.map(i => i.name);
+    const dataValues = sortedItems.map(i => i.qty);
+
+    const canvas = document.getElementById('topItemsChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    // Hủy biểu đồ cũ nếu đã tồn tại trước đó
+    if (topItemsChartInstance) {
+        topItemsChartInstance.destroy();
+    }
+
+    topItemsChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Số lượng bán',
+                data: dataValues,
+                backgroundColor: 'rgba(211, 84, 0, 0.75)',
+                borderColor: 'rgba(211, 84, 0, 1)',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return ` Đã bán: ${context.parsed.y} phần`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        font: { size: 10 },
+                        maxRotation: 45,
+                        minRotation: 25
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0,
+                        font: { size: 11 }
+                    }
+                }
+            }
+        }
+    });
 }
 
 function renderHistory() {
@@ -783,6 +876,9 @@ function renderHistory() {
             return true;
         });
     }
+
+    // Vẽ biểu đồ cột Top 10 món bán chạy nhất cho dữ liệu đã lọc
+    renderTopItemsChart(filteredOrders);
 
     let grandTotalAccumulated = 0;
 
@@ -933,7 +1029,6 @@ async function printReceipt() {
         items: cart
     };
 
-    // Kiểm tra đang sửa đơn cũ hay thêm mới
     if (editingOrderId) {
         const { error } = await db.from('sales_history').update(orderRecord).eq('id', editingOrderId);
         if (error) {
@@ -1171,7 +1266,7 @@ function updateNote(index, value) {
 
 function clearCart() {
     cart = [];
-    editingOrderId = null; // Xóa trạng thái ghi nhớ sửa đơn
+    editingOrderId = null;
     document.getElementById('customerName').value = '';
     document.getElementById('customerPhone').value = '';
     document.getElementById('customerAddress').value = '';
