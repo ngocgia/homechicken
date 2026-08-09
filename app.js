@@ -1,8 +1,8 @@
 // =========================================================================
-// ⚙️ CẤU HÌNH SUPABASE (Dán URL và Key của bạn vào đây)
+// ⚙️ CẤU HÌNH SUPABASE
 // =========================================================================
 const SUPABASE_URL = 'https://pxixtrwfvyzlvfnkszrm.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_mbWkuvRJYm0U1u5Ngfkulw_W_wVVS-o'; 
+const SUPABASE_ANON_KEY = 'sb_publishable_mbWkuvRJYm0U1u5Ngfkulw_W_wVVS-o'; // Dán key của bạn vào đây
 
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -88,9 +88,19 @@ let bluetoothDevice = null;
 let printCharacteristic = null;
 
 const todayStr = new Date().toISOString().split('T')[0];
-document.getElementById('stockDate').value = todayStr;
 
-// --- 1. QUẢN LÝ THỰC ĐƠN (SUPABASE & MENU 3 CHẤM) ---
+document.getElementById('stockDate').value = todayStr;
+document.getElementById('filterStartDate').value = todayStr;
+document.getElementById('filterEndDate').value = todayStr;
+
+// Đóng popup khi chạm ra ngoài
+document.addEventListener('click', function(e) {
+    if (!e.target.classList.contains('menu-dots-btn') && !e.target.classList.contains('action-dots-btn')) {
+        document.querySelectorAll('.menu-dropdown, .action-dropdown').forEach(el => el.classList.remove('show'));
+    }
+});
+
+// --- 1. QUẢN LÝ THỰC ĐƠN (SUPABASE) ---
 async function loadMenuFromSupabase() {
     const { data, error } = await db.from('menu').select('*').order('id', { ascending: true });
     if (error) {
@@ -166,20 +176,13 @@ function cancelEditMenu() {
 
 function toggleMenuDropdown(id, event) {
     event.stopPropagation();
-    document.querySelectorAll('.menu-dropdown').forEach(el => {
+    document.querySelectorAll('.menu-dropdown, .action-dropdown').forEach(el => {
         if (el.id !== `dropdown-${id}`) el.classList.remove('show');
     });
 
     const currentDropdown = document.getElementById(`dropdown-${id}`);
     if (currentDropdown) currentDropdown.classList.toggle('show');
 }
-
-// Bấm ra ngoài khoảng trống sẽ đóng các menu 3 chấm đang mở
-document.addEventListener('click', function(e) {
-    if (!e.target.classList.contains('menu-dots-btn')) {
-        document.querySelectorAll('.menu-dropdown').forEach(el => el.classList.remove('show'));
-    }
-});
 
 function renderMenu(itemsToRender = menu) {
     const menuContainer = document.getElementById('menuContainer');
@@ -217,7 +220,7 @@ function renderMenu(itemsToRender = menu) {
     });
 }
 
-// --- 2. HÓA ĐƠN & SỬA GIÁ TRỰC TIẾP KHI BẤM 2 LẦN ---
+// --- 2. HÓA ĐƠN & SỬA GIÁ TRỰC TIẾP ---
 function enablePriceEdit(index, tdElement) {
     const currentPrice = cart[index].price;
     tdElement.innerHTML = `
@@ -433,12 +436,329 @@ function renderStock() {
     document.getElementById('totalStockValue').innerText = totalValAll.toLocaleString('vi-VN') + " đ";
 }
 
-// --- 4. BÁO CÁO DOANH THU & IN HÓA ĐƠN SUPABASE ---
+// --- 4. BÁO CÁO DOANH THU, LỌC TỪ NGÀY ĐẾN NGÀY & IN LẠI ĐƠN CHUẨN ---
 async function loadSalesHistoryFromSupabase() {
-    const { data, error } = await db.from('sales_history').select('*');
+    const { data, error } = await db.from('sales_history').select('*').order('created_at', { ascending: false });
     if (error) console.error('Lỗi tải báo cáo:', error);
     else salesHistory = data || [];
     renderHistory();
+}
+
+function setTodayFilter() {
+    document.getElementById('filterStartDate').value = todayStr;
+    document.getElementById('filterEndDate').value = todayStr;
+    renderHistory();
+}
+
+function resetDateFilter() {
+    document.getElementById('filterStartDate').value = '';
+    document.getElementById('filterEndDate').value = '';
+    renderHistory();
+}
+
+function toggleActionDropdown(id, event) {
+    event.stopPropagation();
+    document.querySelectorAll('.menu-dropdown, .action-dropdown').forEach(el => {
+        if (el.id !== `action-dropdown-${id}`) el.classList.remove('show');
+    });
+
+    const currentDropdown = document.getElementById(`action-dropdown-${id}`);
+    if (currentDropdown) currentDropdown.classList.toggle('show');
+}
+
+function toggleDayOrders(dateKey) {
+    const contentBox = document.getElementById(`dayOrdersBlock-${dateKey}`);
+    const iconElem = document.getElementById(`toggleIcon-${dateKey}`);
+    
+    if (contentBox) {
+        if (contentBox.style.display === 'none') {
+            contentBox.style.display = 'block';
+            if (iconElem) iconElem.innerText = '▲ Thu gọn';
+        } else {
+            contentBox.style.display = 'none';
+            if (iconElem) iconElem.innerText = '▼ Xem chi tiết';
+        }
+    }
+}
+
+function viewOrderDetail(orderId) {
+    const order = salesHistory.find(o => o.id === orderId);
+    if (!order) return;
+
+    let infoHTML = `
+        <b>Loại đơn:</b> ${order.type || 'Chưa rõ'}<br>
+        <b>Khách hàng:</b> ${order.customer || 'Khách vãng lai'}<br>
+        <b>Số điện thoại:</b> ${order.phone || 'Chưa nhập'}<br>
+    `;
+    if (order.address) infoHTML += `<b>Địa chỉ ship:</b> ${order.address}<br>`;
+    if (order.pickup_time) infoHTML += `<b>Giờ tới lấy:</b> ${order.pickup_time}<br>`;
+    infoHTML += `<b>Thời gian tạo:</b> ${order.time}`;
+
+    document.getElementById('modalOrderInfo').innerHTML = infoHTML;
+
+    const itemsBody = document.getElementById('modalOrderItemsBody');
+    itemsBody.innerHTML = '';
+
+    if (order.items && Array.isArray(order.items)) {
+        order.items.forEach(item => {
+            const itemSubtotal = item.price * item.qty;
+            let noteStr = item.note ? `<br><small style="color:#7f8c8d;">└ Note: ${item.note}</small>` : '';
+            itemsBody.innerHTML += `
+                <tr>
+                    <td>${item.name}${noteStr}</td>
+                    <td style="text-align: center;">${item.qty}</td>
+                    <td style="text-align: right;">${itemSubtotal.toLocaleString('vi-VN')} đ</td>
+                </tr>
+            `;
+        });
+    }
+
+    let totalHTML = '';
+    if (order.discount_percent > 0) {
+        totalHTML += `<div style="font-size: 11px; color:#7f8c8d;">Tạm tính: ${(order.subtotal || 0).toLocaleString('vi-VN')} đ</div>`;
+        totalHTML += `<div style="font-size: 11px; color:#e67e22;">Giảm giá (${order.discount_percent}%): -${(order.discount_amount || 0).toLocaleString('vi-VN')} đ</div>`;
+    }
+    totalHTML += `TỔNG CỘNG: ${(order.total || 0).toLocaleString('vi-VN')} đ`;
+
+    document.getElementById('modalOrderTotal').innerHTML = totalHTML;
+    document.getElementById('orderDetailModal').style.display = 'block';
+}
+
+function closeOrderDetailModal() {
+    document.getElementById('orderDetailModal').style.display = 'none';
+}
+
+async function rePrintOrder(orderId) {
+    const order = salesHistory.find(o => o.id === orderId);
+    if (!order) {
+        alert('Không tìm thấy dữ liệu đơn hàng để in!');
+        return;
+    }
+
+    const orderType = order.type || 'HÓA ĐƠN';
+    const customerName = order.customer || 'Khách vãng lai';
+    const customerPhone = order.phone || '';
+    const customerAddress = order.address || '';
+    const pickupTime = order.pickup_time || '';
+    const orderItems = order.items || [];
+    const discountPercent = order.discount_percent || 0;
+    const discountAmount = order.discount_amount || 0;
+    const subtotalTotal = order.subtotal || order.total;
+    const finalTotal = order.total || 0;
+
+    let printText = `    HOME CHICKEN\n01 Cao Thang - Quang Ngai\nDT: 0392 375 906\n--------------------------------\n[ ${orderType} - IN LẠI ]\nKhach: ${customerName}\n`;
+    if (customerPhone) printText += `SDT: ${customerPhone}\n`;
+    if (customerAddress) printText += `DC: ${customerAddress}\n`;
+    if (pickupTime) printText += `Gio hen lay: ${pickupTime}\n`;
+    printText += `--------------------------------\n`;
+
+    orderItems.forEach(item => {
+        const subtotal = item.price * item.qty;
+        printText += `${item.name}\n  ${item.qty} x ${item.price.toLocaleString('vi-VN')} = ${subtotal.toLocaleString('vi-VN')} d\n`;
+        if (item.note && item.note.trim() !== '') {
+            printText += `  * Note: ${item.note.trim()}\n`;
+        }
+    });
+
+    if (discountPercent > 0) {
+        printText += `--------------------------------\nTam tinh: ${subtotalTotal.toLocaleString('vi-VN')} d\nGiam gia (${discountPercent}%): -${discountAmount.toLocaleString('vi-VN')} d\n`;
+    }
+
+    printText += `--------------------------------\nTONG CONG: ${finalTotal.toLocaleString('vi-VN')} d\n--------------------------------\n  Cam on quy khach & Hen gap lai!\n\n\n`;
+
+    document.getElementById('printOrderType').innerText = "[ " + orderType + " - IN LẠI ]";
+    let infoHTML = `<b>Khách:</b> ${customerName}<br>`;
+    if (customerPhone) infoHTML += `<b>SĐT:</b> ${customerPhone}<br>`;
+    if (customerAddress) infoHTML += `<b>Địa chỉ ship:</b> ${customerAddress}<br>`;
+    if (pickupTime) infoHTML += `<b>Giờ tới lấy:</b> ${pickupTime}<br>`;
+    document.getElementById('printCustomerInfo').innerHTML = infoHTML;
+
+    const printBody = document.getElementById('printBody');
+    printBody.innerHTML = '';
+
+    orderItems.forEach(item => {
+        const subtotal = item.price * item.qty;
+        let rowHTML = `
+            <tr>
+                <td>${item.name}</td>
+                <td class="num">${item.qty}</td>
+                <td class="num">${subtotal.toLocaleString('vi-VN')}</td>
+            </tr>
+        `;
+        if (item.note && item.note.trim() !== '') {
+            rowHTML += `<tr><td colspan="3" class="receipt-note">└> Ghi chú: ${item.note.trim()}</td></tr>`;
+        }
+        printBody.innerHTML += rowHTML;
+    });
+
+    const printDiscountBlock = document.getElementById('printDiscountBlock');
+    if (discountPercent > 0) {
+        document.getElementById('printSubTotal').innerText = subtotalTotal.toLocaleString('vi-VN');
+        document.getElementById('printDiscountPercent').innerText = discountPercent;
+        document.getElementById('printDiscountVal').innerText = discountAmount.toLocaleString('vi-VN');
+        printDiscountBlock.style.display = 'block';
+    } else {
+        printDiscountBlock.style.display = 'none';
+    }
+
+    document.getElementById('printTotal').innerText = finalTotal.toLocaleString('vi-VN');
+
+    await printBluetooth(printText);
+}
+
+function editOrder(orderId) {
+    const order = salesHistory.find(o => o.id === orderId);
+    if (!order) return;
+
+    if (confirm(`Bạn có muốn nạp đơn hàng của khách "${order.customer}" vào giỏ để chỉnh sửa không?`)) {
+        cart = JSON.parse(JSON.stringify(order.items || []));
+        document.getElementById('orderType').value = order.type || 'SHIP MANG VỀ';
+        document.getElementById('customerName').value = order.customer || '';
+        document.getElementById('customerPhone').value = order.phone || '';
+        document.getElementById('customerAddress').value = order.address || '';
+        document.getElementById('pickupTime').value = order.pickup_time || '';
+        document.getElementById('discountInput').value = order.discount_percent || '';
+
+        toggleOrderFields();
+        renderCart();
+        switchTab('cart');
+    }
+}
+
+function renderHistory() {
+    const salesContainer = document.getElementById('salesHistoryContainer');
+    salesContainer.innerHTML = '';
+
+    const startDate = document.getElementById('filterStartDate').value;
+    const endDate = document.getElementById('filterEndDate').value;
+
+    let filteredOrders = salesHistory;
+
+    if (startDate || endDate) {
+        filteredOrders = salesHistory.filter(order => {
+            let orderDate = todayStr;
+            if (order.created_at) {
+                orderDate = order.created_at.split('T')[0];
+            }
+            if (startDate && orderDate < startDate) return false;
+            if (endDate && orderDate > endDate) return false;
+            return true;
+        });
+    }
+
+    let grandTotalAccumulated = 0;
+
+    if (filteredOrders.length === 0) {
+        salesContainer.innerHTML = '<div style="text-align: center; color: #8e8e93; padding: 20px;">Không có đơn hàng nào trong khoảng thời gian này!</div>';
+        document.getElementById('dailyOrderCount').innerText = "0 đơn";
+        document.getElementById('dailyTotalAmount').innerText = "0 đ";
+        return;
+    }
+
+    const historyByDate = {};
+
+    filteredOrders.forEach(order => {
+        grandTotalAccumulated += order.total;
+        let dateKey = todayStr;
+        if (order.created_at) {
+            dateKey = order.created_at.split('T')[0];
+        }
+        
+        if (!historyByDate[dateKey]) {
+            historyByDate[dateKey] = [];
+        }
+        historyByDate[dateKey].push(order);
+    });
+
+    const sortedDates = Object.keys(historyByDate).sort().reverse();
+
+    sortedDates.forEach((d, index) => {
+        const ordersInDay = historyByDate[d];
+        
+        ordersInDay.sort((a, b) => {
+            if (b.time && a.time) {
+                return b.time.localeCompare(a.time);
+            }
+            return b.id - a.id;
+        });
+
+        let dayTotalSales = 0;
+
+        const dateParts = d.split('-');
+        const displayDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+
+        const isDefaultOpen = index === 0;
+        const displayStyle = isDefaultOpen ? 'block' : 'none';
+        const iconText = isDefaultOpen ? '▲ Thu gọn' : '▼ Xem chi tiết';
+
+        let dayHTML = `
+            <div class="day-toggle-header" onclick="toggleDayOrders('${d}')">
+                <div>
+                    📅 <b>Ngày: ${displayDate}</b> (${ordersInDay.length} đơn)
+                    <span class="day-toggle-icon" id="toggleIcon-${d}">${iconText}</span>
+                </div>
+                <span id="salesDayTotal-${d}" style="color: #c0392b;">0 đ</span>
+            </div>
+            
+            <div id="dayOrdersBlock-${d}" style="display: ${displayStyle}; overflow-x: visible;">
+                <table class="report-table" style="margin-bottom: 5px;">
+                    <thead>
+                        <tr>
+                            <th style="width: 22%;">Giờ</th>
+                            <th style="width: 43%;">Khách / Món</th>
+                            <th style="width: 25%; text-align: right;">Tiền</th>
+                            <th style="width: 10%; text-align: center;">⚙️</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        ordersInDay.forEach(order => {
+            dayTotalSales += order.total;
+            let subDetail = order.type || '';
+            if (order.pickup_time) subDetail += ` (${order.pickup_time})`;
+
+            let itemsSummary = '';
+            if (order.items && Array.isArray(order.items)) {
+                itemsSummary = order.items.map(i => `${i.name} (${i.qty})`).join(', ');
+            }
+
+            dayHTML += `
+                <tr>
+                    <td><b>${order.time}</b></td>
+                    <td onclick="viewOrderDetail(${order.id})" style="cursor: pointer;">
+                        <div><b>${order.customer}</b></div>
+                        <div style="font-size: 10px; color: #d35400;">${subDetail}</div>
+                        <div style="font-size: 10px; color: #7f8c8d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">
+                            ${itemsSummary}
+                        </div>
+                    </td>
+                    <td style="text-align: right; font-weight: bold; color: #c0392b;">${order.total.toLocaleString('vi-VN')} đ</td>
+                    <td style="text-align: center; position: relative;">
+                        <span class="action-dots-btn" onclick="toggleActionDropdown(${order.id}, event)">⋮</span>
+                        
+                        <div class="action-dropdown" id="action-dropdown-${order.id}">
+                            <button class="menu-dropdown-item view" onclick="viewOrderDetail(${order.id})">👁️ Xem chi tiết</button>
+                            <button class="menu-dropdown-item print" onclick="rePrintOrder(${order.id})">🖨️ In lại đơn</button>
+                            <button class="menu-dropdown-item edit" onclick="editOrder(${order.id})">✏️ Sửa đơn</button>
+                            <button class="menu-dropdown-item delete" onclick="deleteOrder(${order.id})">🗑️ Xóa đơn</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+
+        dayHTML += `</tbody></table></div>`;
+        salesContainer.innerHTML += dayHTML;
+
+        setTimeout(() => {
+            const dayElem = document.getElementById(`salesDayTotal-${d}`);
+            if (dayElem) dayElem.innerText = "Tổng: " + dayTotalSales.toLocaleString('vi-VN') + " đ";
+        }, 10);
+    });
+
+    document.getElementById('dailyOrderCount').innerText = filteredOrders.length + " đơn";
+    document.getElementById('dailyTotalAmount').innerText = grandTotalAccumulated.toLocaleString('vi-VN') + " đ";
 }
 
 async function printReceipt() {
@@ -551,52 +871,11 @@ async function printReceipt() {
     switchTab('menu');
 }
 
-function renderHistory() {
-    const historyBody = document.getElementById('historyBody');
-    historyBody.innerHTML = '';
-
-    let grandTotalDaily = 0;
-    const reversedHistory = [...salesHistory].reverse();
-
-    reversedHistory.forEach((order) => {
-        grandTotalDaily += order.total;
-        let subDetail = order.type || '';
-        if (order.pickup_time) subDetail += ` (${order.pickup_time})`;
-
-        historyBody.innerHTML += `
-            <tr>
-                <td><b>${order.time}</b></td>
-                <td>
-                    <div><b>${order.customer}</b></div>
-                    <div style="font-size: 10px; color: #7f8c8d;">${subDetail}</div>
-                </td>
-                <td style="text-align: right; font-weight: bold; color: #d35400;">${order.total.toLocaleString('vi-VN')} đ</td>
-                <td style="text-align: center;">
-                    <button class="btn btn-danger btn-sm" onclick="deleteOrder(${order.id})">Xóa</button>
-                </td>
-            </tr>
-        `;
-    });
-
-    document.getElementById('dailyOrderCount').innerText = salesHistory.length + " đơn";
-    document.getElementById('dailyTotalAmount').innerText = grandTotalDaily.toLocaleString('vi-VN') + " đ";
-}
-
 async function deleteOrder(orderId) {
     if (confirm('Bạn có chắc muốn xóa hóa đơn này khỏi Supabase?')) {
         const { error } = await db.from('sales_history').delete().eq('id', orderId);
         if (!error) {
             salesHistory = salesHistory.filter(o => o.id !== orderId);
-            renderHistory();
-        }
-    }
-}
-
-async function resetDailySales() {
-    if (confirm('Bạn có chắc muốn xóa TOÀN BỘ lịch sử đơn hàng trên Supabase để bắt đầu ngày làm việc mới?')) {
-        const { error } = await db.from('sales_history').delete().neq('id', 0);
-        if (!error) {
-            salesHistory = [];
             renderHistory();
         }
     }

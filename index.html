@@ -6,7 +6,6 @@
     <title>Home Chicken - POS Mobile</title>
     <!-- Thư viện Supabase JS SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- File CSS riêng -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -27,14 +26,13 @@
             </div>
         </div>
 
-        <!-- Khung Quản lý Thực đơn (Ẩn/Hiện khi bấm nút) -->
         <div class="card" id="menuManagerBox" style="display: none; border: 2px solid #d35400;">
             <h2 id="menuFormTitle">Thêm Món Mới</h2>
             <div class="info-form">
                 <input type="hidden" id="editMenuId">
                 <div class="form-row">
                     <label for="menuCategoryInput">Danh mục:</label>
-                    <input type="text" id="menuCategoryInput" placeholder="Vd: Gà Viên Sốt, Tokbokki, Món Thêm...">
+                    <input type="text" id="menuCategoryInput" placeholder="Vd: Gà Viên Sốt, Tokbokki...">
                 </div>
                 <div class="form-row">
                     <label for="menuNameInput">Tên món:</label>
@@ -165,40 +163,61 @@
         </div>
     </div>
 
-    <!-- TAB 4: BÁO CÁO DOANH THU -->
+    <!-- TAB 4: BÁO CÁO DOANH THU CÓ BỘ LỌC TỪ NGÀY ĐẾN NGÀY (TRÊN 1 DÒNG) -->
     <div id="tab-report" class="tab-content">
         <div class="card">
             <h2>
                 <span>Báo Cáo Doanh Thu</span>
-                <button class="btn btn-danger btn-sm" onclick="resetDailySales()">Sáng Ngày Mới</button>
             </h2>
+
+            <div class="info-form" style="margin-bottom: 10px;">
+                <div class="form-row date-range-row">
+                    <input type="date" id="filterStartDate" onchange="renderHistory()" title="Từ ngày">
+                    <span style="font-weight: bold; color: #7f8c8d;">➔</span>
+                    <input type="date" id="filterEndDate" onchange="renderHistory()" title="Đến ngày">
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-primary btn-sm" style="flex: 1;" onclick="setTodayFilter()">Hôm nay</button>
+                    <button class="btn btn-clear btn-sm" style="width: auto; padding: 0 12px;" onclick="resetDateFilter()">Tất cả</button>
+                </div>
+            </div>
 
             <div class="summary-box">
                 <div class="summary-item">
-                    <span>Số đơn hôm nay:</span>
+                    <span>Tổng số đơn đã bán:</span>
                     <span id="dailyOrderCount">0 đơn</span>
                 </div>
                 <div class="summary-item">
-                    <span>TỔNG DOANH THU:</span>
+                    <span>TỔNG DOANH THU LỌC ĐƯỢC:</span>
                     <span id="dailyTotalAmount">0 đ</span>
                 </div>
             </div>
 
-            <h3 style="font-size: 14px; margin-bottom: 8px;">Lịch Sử Hóa Đơn</h3>
-            <div style="max-height: 350px; overflow-y: auto;">
-                <table class="report-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 25%;">Giờ</th>
-                            <th style="width: 35%;">Khách/Loại</th>
-                            <th style="width: 25%; text-align: right;">Tiền</th>
-                            <th style="width: 15%; text-align: center;">Xóa</th>
-                        </tr>
-                    </thead>
-                    <tbody id="historyBody"></tbody>
-                </table>
+            <h3 style="font-size: 14px; margin-bottom: 8px;">Lịch Sử Hóa Đơn Chi Tiết</h3>
+            <div style="max-height: 400px; overflow-y: auto;" id="salesHistoryContainer">
+                Đang tải báo cáo doanh thu...
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Modal Popup Xem Chi Tiết Đơn Hàng -->
+<div id="orderDetailModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeOrderDetailModal()">&times;</span>
+        <h2 style="font-size: 16px; color: #d35400; border-bottom: 1px solid #eee; padding-bottom: 8px;">Chi Tiết Đơn Hàng</h2>
+        <div id="modalOrderInfo" style="font-size: 12px; margin: 10px 0; line-height: 1.5; background: #f8f9fa; padding: 8px; border-radius: 6px;"></div>
+        <table class="bill-table" style="margin-top: 8px;">
+            <thead>
+                <tr>
+                    <th>Món</th>
+                    <th style="width: 50px; text-align: center;">SL</th>
+                    <th style="text-align: right;">Thành tiền</th>
+                </tr>
+            </thead>
+            <tbody id="modalOrderItemsBody"></tbody>
+        </table>
+        <div id="modalOrderTotal" style="text-align: right; font-weight: bold; font-size: 15px; color: #c0392b; margin-top: 8px;"></div>
     </div>
 </div>
 
