@@ -86,6 +86,7 @@ let salesHistory = [];
 let stockList = [];
 let bluetoothDevice = null;
 let printCharacteristic = null;
+let editingOrderId = null; // Biến ghi nhớ ID đơn hàng đang được sửa
 
 const todayStr = new Date().toISOString().split('T')[0];
 
@@ -746,6 +747,8 @@ function editOrder(orderId) {
     if (!order) return;
 
     if (confirm(`Bạn có muốn nạp đơn hàng của khách "${order.customer}" vào giỏ để chỉnh sửa không?`)) {
+        editingOrderId = order.id; // Ghi nhớ ID của đơn hàng đang sửa
+        
         cart = JSON.parse(JSON.stringify(order.items || []));
         document.getElementById('orderType').value = order.type || 'SHIP MANG VỀ';
         document.getElementById('customerName').value = order.customer || '';
@@ -917,7 +920,6 @@ async function printReceipt() {
     const finalTotal = subtotalTotal - discountAmount;
 
     const orderRecord = {
-        id: Date.now(),
         time: timeStr,
         type: orderType,
         customer: customerName,
@@ -931,9 +933,30 @@ async function printReceipt() {
         items: cart
     };
 
-    const { error } = await db.from('sales_history').insert([orderRecord]);
-    if (error) console.error('Lỗi lưu đơn hàng:', error);
-    else salesHistory.push(orderRecord);
+    // Kiểm tra đang sửa đơn cũ hay thêm mới
+    if (editingOrderId) {
+        const { error } = await db.from('sales_history').update(orderRecord).eq('id', editingOrderId);
+        if (error) {
+            console.error('Lỗi cập nhật đơn hàng:', error);
+            alert('Lỗi khi cập nhật đơn hàng: ' + error.message);
+            return;
+        } else {
+            const index = salesHistory.findIndex(o => o.id === editingOrderId);
+            if (index !== -1) {
+                salesHistory[index] = { ...orderRecord, id: editingOrderId };
+            }
+        }
+    } else {
+        orderRecord.id = Date.now();
+        const { error } = await db.from('sales_history').insert([orderRecord]);
+        if (error) {
+            console.error('Lỗi lưu đơn hàng:', error);
+            alert('Lỗi khi lưu đơn hàng: ' + error.message);
+            return;
+        } else {
+            salesHistory.push(orderRecord);
+        }
+    }
 
     let printText = `    HOME CHICKEN\n01 Cao Thang - Quang Ngai\nDT: 0392 375 906\n--------------------------------\n[ ${orderType} ]\nKhach: ${customerName}\n`;
     if (customerPhone) printText += `SDT: ${customerPhone}\n`;
@@ -1148,6 +1171,7 @@ function updateNote(index, value) {
 
 function clearCart() {
     cart = [];
+    editingOrderId = null; // Xóa trạng thái ghi nhớ sửa đơn
     document.getElementById('customerName').value = '';
     document.getElementById('customerPhone').value = '';
     document.getElementById('customerAddress').value = '';
