@@ -119,115 +119,124 @@ function removeVietnameseTones(str) {
 // =========================================================================
 // 🖨️ BỘ VẼ BILL BITMAP CHỮ TO RÕ NÉT, CÂN BẰNG ĐOẠN & KHÔNG BỊ ĐÈ DÒNG
 // =========================================================================
+// =========================================================================
+// 🖨️ BỘ VẼ BILL BITMAP SẮC NÉT, BỔ SUNG FB & GIÃN DÒNG THOÁNG ĐẸP (384 DOTS)
+// =========================================================================
+// =========================================================================
+// 🖨️ BỘ VẼ BILL BITMAP CHỮ TO RÕ NÉT, BỔ SUNG FB & GIÃN DÒNG CHUẨN (384 DOTS)
+// =========================================================================
 async function printOrderAsBitmap(orderData) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    const width = 384; // Mật độ in 384 điểm/dòng của máy K57 (48mm)
+    const width = 384; // 384 điểm ảnh / dòng của máy K57 (48mm)
     
     const itemsCount = (orderData.items || []).length;
-    // Tính toán chiều cao canvas đủ khoảng trống cho các đoạn
-    const height = 420 + (itemsCount * 65) + (orderData.discount_percent > 0 ? 80 : 0);
+    // Tăng chiều cao canvas tương ứng với cỡ chữ lớn hơn
+    const height = 560 + (itemsCount * 85) + (orderData.discount_percent > 0 ? 100 : 0);
     
     canvas.width = width;
     canvas.height = height;
 
-    // Nền trắng
+    // Nền trắng tinh
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, width, height);
 
     ctx.fillStyle = '#000000';
     ctx.textBaseline = 'top';
+    ctx.imageSmoothingEnabled = false; // Tắt làm mịn nét để chữ in ra đậm & sắc nét
 
-    let y = 10;
+    let y = 12;
 
-    // Tên quán (Chữ to rõ - 34px)
-    ctx.font = 'bold 34px Arial';
+    // 1. TIÊU ĐỀ HÓA ĐƠN (Tên quán to siêu nổi bật)
+    ctx.font = 'bold 36px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('HOME CHICKEN', width / 2, y); y += 40;
+    ctx.fillText('HOME CHICKEN', width / 2, y); y += 46;
 
-    ctx.font = '28px Arial';
-    ctx.fillText('ĐC: 01 Cao Thắng - Quảng Ngãi', width / 2, y); y += 26;
+    ctx.font = 'bold 24px Arial';
+    ctx.fillText('ĐC: 01 Cao Thắng-P.Kon Tum', width / 2, y); y += 26;
     ctx.fillText('SĐT: 0392 375 906', width / 2, y); y += 26;
+    ctx.fillText('FB: Ngô Thị Thảo Ni', width / 2, y); y += 30;
 
     // Đường kẻ nét đứt
     function drawDashLine(currY) {
         ctx.beginPath();
         ctx.lineWidth = 2;
-        ctx.setLineDash([5, 4]);
+        ctx.setLineDash([6, 4]);
         ctx.moveTo(5, currY);
         ctx.lineTo(width - 5, currY);
         ctx.stroke();
         ctx.setLineDash([]);
     }
 
-    drawDashLine(y); y += 12;
+    drawDashLine(y); y += 16;
 
-    // Loại đơn & Thông tin khách (Chữ to 26px / 20px)
-    ctx.font = 'bold 26px Arial';
-    ctx.fillText(`[ ${orderData.type || 'HÓA ĐƠN'} ]`, width / 2, y); y += 34;
+    // 2. LOẠI ĐƠN & THÔNG TIN KHÁCH HÀNG (Cỡ chữ to)
+    ctx.font = 'bold 28px Arial';
+    ctx.fillText(`[ ${orderData.type || 'HÓA ĐƠN'} ]`, width / 2, y); y += 40;
 
-    ctx.font = 'bold 20px Arial';
+    ctx.font = 'bold 22px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText(`Khách: ${orderData.customer || 'Khách vãng lai'}`, 5, y); y += 26;
-    if (orderData.phone) { ctx.fillText(`SĐT: ${orderData.phone}`, 5, y); y += 26; }
-    if (orderData.address) { ctx.fillText(`ĐC: ${orderData.address}`, 5, y); y += 26; }
-    if (orderData.pickup_time) { ctx.fillText(`Giờ hẹn: ${orderData.pickup_time}`, 5, y); y += 26; }
+    ctx.fillText(`Khách: ${orderData.customer || 'Khách vãng lai'}`, 5, y); y += 30;
+    if (orderData.phone) { ctx.fillText(`SĐT: ${orderData.phone}`, 5, y); y += 30; }
+    if (orderData.address) { ctx.fillText(`ĐC: ${orderData.address}`, 5, y); y += 30; }
+    if (orderData.pickup_time) { ctx.fillText(`Giờ hẹn: ${orderData.pickup_time}`, 5, y); y += 30; }
 
-    drawDashLine(y); y += 12;
+    drawDashLine(y); y += 16;
 
-    // Danh sách món ăn - Cân chỉnh khoảng cách chuẩn, KHÔNG BỊ ĐÈ DÒNG
+    // 3. DANH SÁCH MÓN ĂN (TĂNG CỠ CHỮ + GIÃN KHOẢNG CÁCH CHUẨN)
     (orderData.items || []).forEach(item => {
-        // Tên món (Font 26px)
-        ctx.font = 'bold 26px Arial';
+        // Tên món (Tăng lên 25px - Chữ to, nét đậm)
+        ctx.font = 'bold 25px Arial';
         ctx.textAlign = 'left';
         ctx.fillText(item.name, 5, y); 
-        y += 28; // Giữ khoảng cách 28px để dòng dưới không bị đè lên tên món
+        y += 35; // Giãn dòng an toàn, tuyệt đối không bị đè chữ
 
-        // Số lượng x Giá tiền (Font 22px)
-        ctx.font = '22px Arial';
+        // Số lượng x Giá tiền (Tăng lên 20px)
+        ctx.font = 'bold 20px Arial';
         const detailStr = `${item.qty} x ${item.price.toLocaleString('vi-VN')} đ`;
         const totalStr = `${(item.qty * item.price).toLocaleString('vi-VN')} đ`;
 
-        ctx.fillText(detailStr, 15, y);
+        ctx.fillText(detailStr, 12, y);
         ctx.textAlign = 'right';
         ctx.fillText(totalStr, width - 5, y);
-        y += 32; // Khoảng cách giãn sang món tiếp theo
+        y += 35; // Giãn rộng giữa các món
 
         if (item.note && item.note.trim() !== '') {
             ctx.textAlign = 'left';
             ctx.font = 'italic 18px Arial';
-            ctx.fillText(`* Note: ${item.note.trim()}`, 15, y);
-            y += 24;
+            ctx.fillText(`* Note: ${item.note.trim()}`, 12, y);
+            y += 28;
         }
     });
 
-    drawDashLine(y); y += 12;
+    drawDashLine(y); y += 16;
 
-    // Tổng tiền / Giảm giá (Font 22px - 28px)
+    // 4. TỔNG TIỀN / GIẢM GIÁ (Cỡ chữ to)
     if (orderData.discount_percent > 0) {
-        ctx.font = '22px Arial';
+        ctx.font = 'bold 20px Arial';
         ctx.textAlign = 'left'; ctx.fillText('Tạm tính:', 5, y);
         ctx.textAlign = 'right'; ctx.fillText(`${(orderData.subtotal || 0).toLocaleString('vi-VN')} đ`, width - 5, y);
-        y += 28;
+        y += 32;
 
         ctx.textAlign = 'left'; ctx.fillText(`Giảm giá (${orderData.discount_percent}%):`, 5, y);
         ctx.textAlign = 'right'; ctx.fillText(`-${(orderData.discount_amount || 0).toLocaleString('vi-VN')} đ`, width - 5, y);
-        y += 28;
-        drawDashLine(y); y += 12;
+        y += 32;
+        drawDashLine(y); y += 16;
     }
 
-    ctx.font = 'bold 28px Arial';
+    ctx.font = 'bold 30px Arial';
     ctx.textAlign = 'left'; ctx.fillText('TỔNG CỘNG:', 5, y);
     ctx.textAlign = 'right'; ctx.fillText(`${(orderData.total || 0).toLocaleString('vi-VN')} đ`, width - 5, y);
-    y += 36;
+    y += 46;
 
-    drawDashLine(y); y += 14;
+    drawDashLine(y); y += 18;
 
-    ctx.font = 'italic 18px Arial';
+    // 5. LỜI CẢM ƠN
+    ctx.font = 'bold italic 18px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('Cảm ơn quý khách & Hẹn gặp lại!', width / 2, y); y += 30;
+    ctx.fillText('Cảm ơn quý khách & Hẹn gặp lại!', width / 2, y); y += 36;
 
-    // Chuyển đổi dữ liệu Canvas sang Byte Bitmap ESC/POS Command (`GS v 0`)
+    // 🔄 CHUYỂN DỮ LIỆU SANG BITMAP ĐEN THUẦN CHỐNG NHÒE / MỜ
     const imgData = ctx.getImageData(0, 0, width, height);
     const bytesPerLine = width / 8;
     const bitmapBytes = [];
@@ -246,9 +255,11 @@ async function printOrderAsBitmap(orderData) {
                 const r = imgData.data[idx];
                 const g = imgData.data[idx + 1];
                 const b = imgData.data[idx + 2];
-                const brightness = (r + g + b) / 3;
                 
-                if (brightness < 128) {
+                const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+                
+                // Lọc màu đen đậm giúp chữ in sắc nét
+                if (luminance < 200) {
                     byteVal |= (0x80 >> bit);
                 }
             }
@@ -259,7 +270,7 @@ async function printOrderAsBitmap(orderData) {
     // Cuộn giấy thêm 3 dòng trống
     bitmapBytes.push(0x1B, 0x64, 0x03);
 
-    // Gửi byte sang Bluetooth
+    // Gửi byte sang máy in Bluetooth
     await sendRawBluetoothBytes(new Uint8Array(bitmapBytes));
 }
 
