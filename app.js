@@ -86,8 +86,8 @@ let salesHistory = [];
 let stockList = [];
 let bluetoothDevice = null;
 let printCharacteristic = null;
-let editingOrderId = null; 
-let topItemsChartInstance = null; // Biến giữ đối tượng biểu đồ Chart.js
+let editingOrderId = null;
+let topItemsChartInstance = null;
 
 const todayStr = new Date().toISOString().split('T')[0];
 
@@ -105,6 +105,184 @@ document.addEventListener('click', function(e) {
         document.querySelectorAll('.menu-dropdown, .action-dropdown, .stock-dropdown').forEach(el => el.classList.remove('show'));
     }
 });
+
+function removeVietnameseTones(str) {
+    if (!str) return '';
+    return str.normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .replace(/đ/g, 'd').replace(/Đ/g, 'D');
+}
+
+// =========================================================================
+// 🖨️ BỘ VẼ BILL BITMAP CHỮ TO & RÕ NÉT (384 DOTS - K57)
+// =========================================================================
+// =========================================================================
+// 🖨️ BỘ VẼ BILL BITMAP CHỮ TO RÕ NÉT, CÂN BẰNG ĐOẠN & KHÔNG BỊ ĐÈ DÒNG
+// =========================================================================
+async function printOrderAsBitmap(orderData) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const width = 384; // Mật độ in 384 điểm/dòng của máy K57 (48mm)
+    
+    const itemsCount = (orderData.items || []).length;
+    // Tính toán chiều cao canvas đủ khoảng trống cho các đoạn
+    const height = 420 + (itemsCount * 65) + (orderData.discount_percent > 0 ? 80 : 0);
+    
+    canvas.width = width;
+    canvas.height = height;
+
+    // Nền trắng
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = '#000000';
+    ctx.textBaseline = 'top';
+
+    let y = 10;
+
+    // Tên quán (Chữ to rõ - 34px)
+    ctx.font = 'bold 34px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('HOME CHICKEN', width / 2, y); y += 40;
+
+    ctx.font = '28px Arial';
+    ctx.fillText('ĐC: 01 Cao Thắng - Quảng Ngãi', width / 2, y); y += 26;
+    ctx.fillText('SĐT: 0392 375 906', width / 2, y); y += 26;
+
+    // Đường kẻ nét đứt
+    function drawDashLine(currY) {
+        ctx.beginPath();
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 4]);
+        ctx.moveTo(5, currY);
+        ctx.lineTo(width - 5, currY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    drawDashLine(y); y += 12;
+
+    // Loại đơn & Thông tin khách (Chữ to 26px / 20px)
+    ctx.font = 'bold 26px Arial';
+    ctx.fillText(`[ ${orderData.type || 'HÓA ĐƠN'} ]`, width / 2, y); y += 34;
+
+    ctx.font = 'bold 20px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Khách: ${orderData.customer || 'Khách vãng lai'}`, 5, y); y += 26;
+    if (orderData.phone) { ctx.fillText(`SĐT: ${orderData.phone}`, 5, y); y += 26; }
+    if (orderData.address) { ctx.fillText(`ĐC: ${orderData.address}`, 5, y); y += 26; }
+    if (orderData.pickup_time) { ctx.fillText(`Giờ hẹn: ${orderData.pickup_time}`, 5, y); y += 26; }
+
+    drawDashLine(y); y += 12;
+
+    // Danh sách món ăn - Cân chỉnh khoảng cách chuẩn, KHÔNG BỊ ĐÈ DÒNG
+    (orderData.items || []).forEach(item => {
+        // Tên món (Font 26px)
+        ctx.font = 'bold 26px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(item.name, 5, y); 
+        y += 28; // Giữ khoảng cách 28px để dòng dưới không bị đè lên tên món
+
+        // Số lượng x Giá tiền (Font 22px)
+        ctx.font = '22px Arial';
+        const detailStr = `${item.qty} x ${item.price.toLocaleString('vi-VN')} đ`;
+        const totalStr = `${(item.qty * item.price).toLocaleString('vi-VN')} đ`;
+
+        ctx.fillText(detailStr, 15, y);
+        ctx.textAlign = 'right';
+        ctx.fillText(totalStr, width - 5, y);
+        y += 32; // Khoảng cách giãn sang món tiếp theo
+
+        if (item.note && item.note.trim() !== '') {
+            ctx.textAlign = 'left';
+            ctx.font = 'italic 18px Arial';
+            ctx.fillText(`* Note: ${item.note.trim()}`, 15, y);
+            y += 24;
+        }
+    });
+
+    drawDashLine(y); y += 12;
+
+    // Tổng tiền / Giảm giá (Font 22px - 28px)
+    if (orderData.discount_percent > 0) {
+        ctx.font = '22px Arial';
+        ctx.textAlign = 'left'; ctx.fillText('Tạm tính:', 5, y);
+        ctx.textAlign = 'right'; ctx.fillText(`${(orderData.subtotal || 0).toLocaleString('vi-VN')} đ`, width - 5, y);
+        y += 28;
+
+        ctx.textAlign = 'left'; ctx.fillText(`Giảm giá (${orderData.discount_percent}%):`, 5, y);
+        ctx.textAlign = 'right'; ctx.fillText(`-${(orderData.discount_amount || 0).toLocaleString('vi-VN')} đ`, width - 5, y);
+        y += 28;
+        drawDashLine(y); y += 12;
+    }
+
+    ctx.font = 'bold 28px Arial';
+    ctx.textAlign = 'left'; ctx.fillText('TỔNG CỘNG:', 5, y);
+    ctx.textAlign = 'right'; ctx.fillText(`${(orderData.total || 0).toLocaleString('vi-VN')} đ`, width - 5, y);
+    y += 36;
+
+    drawDashLine(y); y += 14;
+
+    ctx.font = 'italic 18px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Cảm ơn quý khách & Hẹn gặp lại!', width / 2, y); y += 30;
+
+    // Chuyển đổi dữ liệu Canvas sang Byte Bitmap ESC/POS Command (`GS v 0`)
+    const imgData = ctx.getImageData(0, 0, width, height);
+    const bytesPerLine = width / 8;
+    const bitmapBytes = [];
+
+    // Lệnh ESC/POS GS v 0
+    bitmapBytes.push(0x1D, 0x76, 0x30, 0x00);
+    bitmapBytes.push(bytesPerLine & 0xFF, (bytesPerLine >> 8) & 0xFF);
+    bitmapBytes.push(height & 0xFF, (height >> 8) & 0xFF);
+
+    for (let h = 0; h < height; h++) {
+        for (let w = 0; w < bytesPerLine; w++) {
+            let byteVal = 0;
+            for (let bit = 0; bit < 8; bit++) {
+                const pixelX = w * 8 + bit;
+                const idx = (h * width + pixelX) * 4;
+                const r = imgData.data[idx];
+                const g = imgData.data[idx + 1];
+                const b = imgData.data[idx + 2];
+                const brightness = (r + g + b) / 3;
+                
+                if (brightness < 128) {
+                    byteVal |= (0x80 >> bit);
+                }
+            }
+            bitmapBytes.push(byteVal);
+        }
+    }
+
+    // Cuộn giấy thêm 3 dòng trống
+    bitmapBytes.push(0x1B, 0x64, 0x03);
+
+    // Gửi byte sang Bluetooth
+    await sendRawBluetoothBytes(new Uint8Array(bitmapBytes));
+}
+
+async function sendRawBluetoothBytes(dataArray) {
+    if (!printCharacteristic) {
+        window.print();
+        return;
+    }
+
+    try {
+        const initCmd = new Uint8Array([0x1B, 0x40]);
+        await printCharacteristic.writeValue(initCmd);
+
+        const CHUNK_SIZE = 200; // Gửi dữ liệu theo từng chunk nhỏ để tránh lỗi
+        for (let i = 0; i < dataArray.length; i += CHUNK_SIZE) {
+            const chunk = dataArray.slice(i, i + CHUNK_SIZE);
+            await printCharacteristic.writeValue(chunk);
+        }
+    } catch (err) {
+        alert('Không thể gửi dữ liệu tới máy in: ' + err.message);
+        window.print();
+    }
+}
 
 // --- 1. QUẢN LÝ THỰC ĐƠN (SUPABASE) ---
 async function loadMenuFromSupabase() {
@@ -573,7 +751,7 @@ function renderStock() {
     document.getElementById('totalStockValue').innerText = totalValAll.toLocaleString('vi-VN') + " đ";
 }
 
-// --- 4. BÁO CÁO DOANH THU & VẼ BIỂU ĐỒ TOP 10 MÓN BÁN CHẠY (LOẠI BỎ MỤC KHÁC) ---
+// --- 4. BÁO CÁO DOANH THU & BIỂU ĐỒ ---
 async function loadSalesHistoryFromSupabase() {
     const { data, error } = await db.from('sales_history').select('*').order('created_at', { ascending: false });
     if (error) console.error('Lỗi tải báo cáo:', error);
@@ -665,6 +843,7 @@ function closeOrderDetailModal() {
     document.getElementById('orderDetailModal').style.display = 'none';
 }
 
+// 🖨️ IN LẠI ĐƠN HÀNG DẠNG BITMAP CHỮ TO & RÕ NÉT
 async function rePrintOrder(orderId) {
     const order = salesHistory.find(o => o.id === orderId);
     if (!order) {
@@ -672,48 +851,17 @@ async function rePrintOrder(orderId) {
         return;
     }
 
-    const orderType = order.type || 'HÓA ĐƠN';
-    const customerName = order.customer || 'Khách vãng lai';
-    const customerPhone = order.phone || '';
-    const customerAddress = order.address || '';
-    const pickupTime = order.pickup_time || '';
-    const orderItems = order.items || [];
-    const discountPercent = order.discount_percent || 0;
-    const discountAmount = order.discount_amount || 0;
-    const subtotalTotal = order.subtotal || order.total;
-    const finalTotal = order.total || 0;
-
-    let printText = `    HOME CHICKEN\n01 Cao Thang - Quang Ngai\nDT: 0392 375 906\n--------------------------------\n[ ${orderType} - IN LẠI ]\nKhach: ${customerName}\n`;
-    if (customerPhone) printText += `SDT: ${customerPhone}\n`;
-    if (customerAddress) printText += `DC: ${customerAddress}\n`;
-    if (pickupTime) printText += `Gio hen lay: ${pickupTime}\n`;
-    printText += `--------------------------------\n`;
-
-    orderItems.forEach(item => {
-        const subtotal = item.price * item.qty;
-        printText += `${item.name}\n  ${item.qty} x ${item.price.toLocaleString('vi-VN')} = ${subtotal.toLocaleString('vi-VN')} d\n`;
-        if (item.note && item.note.trim() !== '') {
-            printText += `  * Note: ${item.note.trim()}\n`;
-        }
-    });
-
-    if (discountPercent > 0) {
-        printText += `--------------------------------\nTam tinh: ${subtotalTotal.toLocaleString('vi-VN')} d\nGiam gia (${discountPercent}%): -${discountAmount.toLocaleString('vi-VN')} d\n`;
-    }
-
-    printText += `--------------------------------\nTONG CONG: ${finalTotal.toLocaleString('vi-VN')} d\n--------------------------------\n  Cam on quy khach & Hen gap lai!\n\n\n`;
-
-    document.getElementById('printOrderType').innerText = "[ " + orderType + " - IN LẠI ]";
-    let infoHTML = `<b>Khách:</b> ${customerName}<br>`;
-    if (customerPhone) infoHTML += `<b>SĐT:</b> ${customerPhone}<br>`;
-    if (customerAddress) infoHTML += `<b>Địa chỉ ship:</b> ${customerAddress}<br>`;
-    if (pickupTime) infoHTML += `<b>Giờ tới lấy:</b> ${pickupTime}<br>`;
+    document.getElementById('printOrderType').innerText = "[ " + (order.type || 'HÓA ĐƠN') + " - IN LẠI ]";
+    let infoHTML = `<b>Khách:</b> ${order.customer || 'Khách vãng lai'}<br>`;
+    if (order.phone) infoHTML += `<b>SĐT:</b> ${order.phone}<br>`;
+    if (order.address) infoHTML += `<b>Địa chỉ ship:</b> ${order.address}<br>`;
+    if (order.pickup_time) infoHTML += `<b>Giờ tới lấy:</b> ${order.pickup_time}<br>`;
     document.getElementById('printCustomerInfo').innerHTML = infoHTML;
 
     const printBody = document.getElementById('printBody');
     printBody.innerHTML = '';
 
-    orderItems.forEach(item => {
+    (order.items || []).forEach(item => {
         const subtotal = item.price * item.qty;
         let rowHTML = `
             <tr>
@@ -729,18 +877,19 @@ async function rePrintOrder(orderId) {
     });
 
     const printDiscountBlock = document.getElementById('printDiscountBlock');
-    if (discountPercent > 0) {
-        document.getElementById('printSubTotal').innerText = subtotalTotal.toLocaleString('vi-VN');
-        document.getElementById('printDiscountPercent').innerText = discountPercent;
-        document.getElementById('printDiscountVal').innerText = discountAmount.toLocaleString('vi-VN');
+    if (order.discount_percent > 0) {
+        document.getElementById('printSubTotal').innerText = (order.subtotal || order.total).toLocaleString('vi-VN');
+        document.getElementById('printDiscountPercent').innerText = order.discount_percent;
+        document.getElementById('printDiscountVal').innerText = (order.discount_amount || 0).toLocaleString('vi-VN');
         printDiscountBlock.style.display = 'block';
     } else {
         printDiscountBlock.style.display = 'none';
     }
 
-    document.getElementById('printTotal').innerText = finalTotal.toLocaleString('vi-VN');
+    document.getElementById('printTotal').innerText = (order.total || 0).toLocaleString('vi-VN');
 
-    await printBluetooth(printText);
+    // In hóa đơn dạng Bitmap Tiếng Việt qua Bluetooth
+    await printOrderAsBitmap(order);
 }
 
 function editOrder(orderId) {
@@ -764,11 +913,10 @@ function editOrder(orderId) {
     }
 }
 
-// 📊 HÀM TÍNH TOÁN VÀ VẼ BIỂU ĐỒ TOP 10 MÓN BÁN CHẠY
+// 📊 VẼ BIỂU ĐỒ TOP 10 MÓN BÁN CHẠY
 function renderTopItemsChart(filteredOrders) {
     const itemQtyMap = {};
 
-    // Danh sách tên các món thuộc danh mục "Khác" để loại bỏ
     const otherCategoryItemNames = menu
         .filter(m => (m.category || "Khác") === "Khác")
         .map(m => m.name.toLowerCase().trim());
@@ -779,7 +927,6 @@ function renderTopItemsChart(filteredOrders) {
                 const itemNameTrim = (item.name || '').trim();
                 const itemNameLower = itemNameTrim.toLowerCase();
 
-                // Bỏ qua nếu món thuộc danh mục "Khác" (Ví dụ: Phí ship, phụ thu)
                 if (otherCategoryItemNames.includes(itemNameLower) || itemNameLower === 'phí ship') {
                     return;
                 }
@@ -792,11 +939,10 @@ function renderTopItemsChart(filteredOrders) {
         }
     });
 
-    // Sắp xếp giảm dần theo số lượng bán ra
     const sortedItems = Object.keys(itemQtyMap)
         .map(name => ({ name, qty: itemQtyMap[name] }))
         .sort((a, b) => b.qty - a.qty)
-        .slice(0, 10); // Lấy Top 10 món
+        .slice(0, 10);
 
     const labels = sortedItems.map(i => i.name);
     const dataValues = sortedItems.map(i => i.qty);
@@ -805,7 +951,6 @@ function renderTopItemsChart(filteredOrders) {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    // Hủy biểu đồ cũ nếu đã tồn tại trước đó
     if (topItemsChartInstance) {
         topItemsChartInstance.destroy();
     }
@@ -877,7 +1022,6 @@ function renderHistory() {
         });
     }
 
-    // Vẽ biểu đồ cột Top 10 món bán chạy nhất cho dữ liệu đã lọc
     renderTopItemsChart(filteredOrders);
 
     let grandTotalAccumulated = 0;
@@ -1053,29 +1197,6 @@ async function printReceipt() {
         }
     }
 
-    let printText = `    HOME CHICKEN\n01 Cao Thang - Quang Ngai\nDT: 0392 375 906\n--------------------------------\n[ ${orderType} ]\nKhach: ${customerName}\n`;
-    if (customerPhone) printText += `SDT: ${customerPhone}\n`;
-    if (orderType === 'SHIP MANG VỀ' && customerAddress) {
-        printText += `DC: ${customerAddress}\n`;
-    } else if (orderType === 'KHÁCH TỚI LẤY' && pickupTime) {
-        printText += `Gio hen lay: ${pickupTime}\n`;
-    }
-    printText += `--------------------------------\n`;
-
-    cart.forEach(item => {
-        const subtotal = item.price * item.qty;
-        printText += `${item.name}\n  ${item.qty} x ${item.price.toLocaleString('vi-VN')} = ${subtotal.toLocaleString('vi-VN')} d\n`;
-        if (item.note && item.note.trim() !== '') {
-            printText += `  * Note: ${item.note.trim()}\n`;
-        }
-    });
-
-    if (discountPercent > 0) {
-        printText += `--------------------------------\nTam tinh: ${subtotalTotal.toLocaleString('vi-VN')} d\nGiam gia (${discountPercent}%): -${discountAmount.toLocaleString('vi-VN')} d\n`;
-    }
-
-    printText += `--------------------------------\nTONG CONG: ${finalTotal.toLocaleString('vi-VN')} d\n--------------------------------\n  Cam on quy khach & Hen gap lai!\n\n\n`;
-
     document.getElementById('printOrderType').innerText = "[ " + orderType + " ]";
     let infoHTML = `<b>Khách:</b> ${customerName}<br>`;
     if (customerPhone) infoHTML += `<b>SĐT:</b> ${customerPhone}<br>`;
@@ -1117,7 +1238,8 @@ async function printReceipt() {
 
     document.getElementById('printTotal').innerText = finalTotal.toLocaleString('vi-VN');
 
-    await printBluetooth(printText);
+    // In hóa đơn dạng Bitmap Tiếng Việt chữ to & nét qua Bluetooth
+    await printOrderAsBitmap(orderRecord);
 
     clearCart();
     renderHistory();
@@ -1149,16 +1271,9 @@ function toggleOrderFields() {
     }
 }
 
-function removeVietnameseTones(str) {
-    return str.normalize('NFD')
-              .replace(/[\u0300-\u036f]/g, '')
-              .replace(/đ/g, 'd').replace(/Đ/g, 'D')
-              .toLowerCase();
-}
-
 function filterMenu() {
-    const keyword = removeVietnameseTones(document.getElementById('searchInput').value.trim());
-    const filteredMenu = menu.filter(item => removeVietnameseTones(item.name).includes(keyword));
+    const keyword = removeVietnameseTones(document.getElementById('searchInput').value.trim().toLowerCase());
+    const filteredMenu = menu.filter(item => removeVietnameseTones(item.name).toLowerCase().includes(keyword));
     renderMenu(filteredMenu);
 }
 
@@ -1195,33 +1310,6 @@ async function connectBluetooth() {
     } catch (error) {
         console.error(error);
         alert('Lỗi kết nối Bluetooth: ' + error.message);
-    }
-}
-
-async function printBluetooth(textData) {
-    if (!printCharacteristic) {
-        window.print();
-        return;
-    }
-
-    try {
-        const encoder = new TextEncoder();
-        const initCmd = new Uint8Array([0x1B, 0x40]);
-        const cutCmd = new Uint8Array([0x1D, 0x56, 0x41, 0x00]);
-        
-        await printCharacteristic.writeValue(initCmd);
-        
-        const data = encoder.encode(textData);
-        const CHUNK_SIZE = 50;
-        for (let i = 0; i < data.length; i += CHUNK_SIZE) {
-            const chunk = data.slice(i, i + CHUNK_SIZE);
-            await printCharacteristic.writeValue(chunk);
-        }
-
-        await printCharacteristic.writeValue(cutCmd);
-    } catch (err) {
-        alert('Không thể gửi lệnh in Bluetooth: ' + err.message);
-        window.print();
     }
 }
 
