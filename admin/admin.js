@@ -68,6 +68,7 @@ async function loadUsers() {
 }
 
 function renderUserTable() {
+    cleanupDropdowns();
     const tbody = document.getElementById('userTableBody');
     tbody.innerHTML = '';
     
@@ -89,12 +90,17 @@ function renderUserTable() {
             <td>${user.store_phone || '-'}</td>
             <td>
                 ${isRootAdmin ? '<span style="color: gray; font-size: 12px;">Root</span>' : `
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                    <button class="btn btn-secondary btn-sm" onclick="editUser('${user.id}')">✏️ Sửa</button>
-                    <button class="btn btn-primary btn-sm" style="background: var(--primary);" onclick="openMenuManager('${user.id}', '${safeStoreName}')">🍔 QL Menu</button>
-                    <button class="btn btn-primary btn-sm" style="background: #eab308; color: #000;" onclick="openOrderTypeManager('${user.id}', '${safeStoreName}')">📦 QL Loại Đơn</button>
-                    <button class="btn btn-primary btn-sm" style="background: #10b981; color: #fff;" onclick="openLandingManager('${user.id}', '${safeStoreName}')">🌐 QL Landing Page</button>
-                    <button class="btn btn-primary btn-sm" style="background: var(--error);" onclick="deleteUser('${user.id}', '${user.username.replace(/'/g, "\\'")}')">🗑️ Xóa</button>
+                <div class="dropdown">
+                    <button class="btn btn-secondary btn-sm dropbtn" onclick="toggleDropdown('drop-user-${user.id}', event)">
+                        Hành động ▾
+                    </button>
+                    <div id="drop-user-${user.id}" class="dropdown-content">
+                        <a href="#" onclick="event.preventDefault(); editUser('${user.id}')">✏️ Sửa thông tin</a>
+                        <a href="#" onclick="event.preventDefault(); openMenuManager('${user.id}', '${safeStoreName}')" style="color: var(--primary);">🍔 Quản lý Menu</a>
+                        <a href="#" onclick="event.preventDefault(); openOrderTypeManager('${user.id}', '${safeStoreName}')" style="color: #eab308;">📦 Quản lý Loại Đơn</a>
+                        <a href="#" onclick="event.preventDefault(); openLandingManager('${user.id}', '${safeStoreName}')" style="color: #10b981;">🌐 QL Landing Page</a>
+                        <a href="#" onclick="event.preventDefault(); deleteUser('${user.id}', '${user.username.replace(/'/g, "\\'")}')" style="color: var(--error);">🗑️ Xóa cửa hàng</a>
+                    </div>
                 </div>
                 `}
             </td>
@@ -383,6 +389,7 @@ async function loadStoreMenu() {
 }
 
 function renderMenuTable() {
+    cleanupDropdowns();
     const tbody = document.getElementById('menuTableBody');
     tbody.innerHTML = '';
     
@@ -399,9 +406,14 @@ function renderMenuTable() {
             <td><strong>${item.name}</strong></td>
             <td>${item.price.toLocaleString('vi-VN')} đ</td>
             <td>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                    <button class="btn btn-secondary btn-sm" onclick="editMenu('${item.id}')">✏️ Sửa</button>
-                    <button class="btn btn-primary btn-sm" style="background: var(--error);" onclick="deleteMenu('${item.id}', '${safeName}')">🗑️ Xóa</button>
+                <div class="dropdown">
+                    <button class="btn btn-secondary btn-sm dropbtn" onclick="toggleDropdown('drop-menu-${item.id}', event)">
+                        Hành động ▾
+                    </button>
+                    <div id="drop-menu-${item.id}" class="dropdown-content">
+                        <a href="#" onclick="event.preventDefault(); editMenu('${item.id}')">✏️ Sửa món</a>
+                        <a href="#" onclick="event.preventDefault(); deleteMenu('${item.id}', '${safeName}')" style="color: var(--error);">🗑️ Xóa món</a>
+                    </div>
                 </div>
             </td>
         `;
@@ -573,6 +585,7 @@ async function loadStoreTypes() {
 }
 
 function renderTypeTable() {
+    cleanupDropdowns();
     const tbody = document.getElementById('typeTableBody');
     tbody.innerHTML = '';
     
@@ -589,9 +602,14 @@ function renderTypeTable() {
             <td>${item.require_address ? '✅ Có' : '❌ Không'}</td>
             <td>${item.require_time ? '✅ Có' : '❌ Không'}</td>
             <td>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                    <button class="btn btn-secondary btn-sm" onclick="editOrderType('${item.id}')">✏️ Sửa</button>
-                    <button class="btn btn-primary btn-sm" style="background: var(--error);" onclick="deleteOrderType('${item.id}', '${safeName}')">🗑️ Xóa</button>
+                <div class="dropdown">
+                    <button class="btn btn-secondary btn-sm dropbtn" onclick="toggleDropdown('drop-type-${item.id}', event)">
+                        Hành động ▾
+                    </button>
+                    <div id="drop-type-${item.id}" class="dropdown-content">
+                        <a href="#" onclick="event.preventDefault(); editOrderType('${item.id}')">✏️ Sửa loại đơn</a>
+                        <a href="#" onclick="event.preventDefault(); deleteOrderType('${item.id}', '${safeName}')" style="color: var(--error);">🗑️ Xóa loại đơn</a>
+                    </div>
                 </div>
             </td>
         `;
@@ -839,4 +857,71 @@ function showToast(message, type = 'success') {
     toastTimeout = setTimeout(() => {
         toast.classList.remove('show');
     }, 3000);
+}
+
+// Dropdown Logic
+let activeDropdown = null;
+
+function cleanupDropdowns() {
+    if (activeDropdown) {
+        activeDropdown.style.display = 'none';
+        activeDropdown = null;
+    }
+    // Remove any dropdowns that were appended to body
+    document.querySelectorAll('body > .dropdown-content').forEach(el => el.remove());
+}
+
+function toggleDropdown(id, event) {
+    if (event) {
+        event.stopPropagation();
+    }
+    
+    // Đóng dropdown cũ nếu có
+    if (activeDropdown && activeDropdown.id !== id) {
+        activeDropdown.style.display = 'none';
+        activeDropdown = null;
+    }
+    
+    const dropdownMenu = document.getElementById(id);
+    if (!dropdownMenu) return;
+    
+    const button = event.currentTarget;
+    
+    if (dropdownMenu.style.display === 'block') {
+        dropdownMenu.style.display = 'none';
+        activeDropdown = null;
+        return;
+    }
+    
+    // Đưa dropdown ra ngoài body để không bị cắt bới overflow:hidden
+    document.body.appendChild(dropdownMenu);
+    
+    dropdownMenu.style.display = 'block';
+    dropdownMenu.classList.add('show-dropdown');
+    
+    // Tính toán vị trí
+    const rect = button.getBoundingClientRect();
+    const menuWidth = dropdownMenu.offsetWidth || 180;
+    
+    let left = rect.right - menuWidth;
+    let top = rect.bottom + window.scrollY + 5;
+    
+    if (left < 0) left = 10; // Không cho tràn viền trái
+    
+    dropdownMenu.style.position = 'absolute';
+    dropdownMenu.style.top = top + 'px';
+    dropdownMenu.style.left = left + 'px';
+    dropdownMenu.style.right = 'auto'; // override css
+    
+    activeDropdown = dropdownMenu;
+}
+
+// Close the dropdown if the user clicks outside of it
+window.onclick = function(event) {
+    if (!event.target.matches('.dropbtn')) {
+        if (activeDropdown) {
+            activeDropdown.style.display = 'none';
+            activeDropdown = null;
+        }
+    }
 }
