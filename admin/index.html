@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Admin - Quản Lý Cửa Hàng</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <!-- Background Elements -->
+    <div class="bg-shape shape-1"></div>
+    <div class="bg-shape shape-2"></div>
+    <div class="bg-shape shape-3"></div>
+
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-icon">👑</div>
+                <h2>Super Admin</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-link active" data-tab="tab-users">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    Quản lý Tài khoản
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="../index.html" class="nav-link back-link">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                    Về POS
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <div class="header-title">
+                    <h1 id="pageTitle">Danh sách Cửa Hàng</h1>
+                    <p class="subtitle">Quản lý tất cả tài khoản và thông tin các cửa hàng trong hệ thống</p>
+                </div>
+                <div class="header-actions">
+                    <div class="user-badge">
+                        <span class="user-avatar">👑</span>
+                        <span id="headerUsername">Đang tải...</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="content-body">
+                <div id="toast" class="toast hidden"></div>
+
+                <!-- Tab: Users Info -->
+                <section id="tab-users" class="tab-pane active" style="display: block;">
+                    <div class="glass-card">
+                        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3>Tài khoản hệ thống</h3>
+                            <button class="btn btn-primary" onclick="openUserModal()">+ Tạo Cửa Hàng Mới</button>
+                        </div>
+                        
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Username</th>
+                                        <th>Mật khẩu</th>
+                                        <th>Tên Cửa hàng</th>
+                                        <th>Số điện thoại</th>
+                                        <th>Hành động</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="userTableBody">
+                                    <tr>
+                                        <td colspan="5" style="text-align: center; padding: 20px;">Đang tải dữ liệu...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tab: Menu Management (Hidden by default, opened via store button) -->
+                <section id="tab-menu" class="tab-pane hidden" style="display: none;">
+                    <div class="glass-card">
+                        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h3 id="menuStoreTitle">Quản lý Thực đơn</h3>
+                                <p style="font-size: 13px; color: var(--text-muted); cursor: pointer; text-decoration: underline;" onclick="backToUsers()">⬅ Quay lại danh sách cửa hàng</p>
+                            </div>
+                            <button class="btn btn-primary" onclick="openMenuModal()">+ Thêm Món Mới</button>
+                        </div>
+                        
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Danh mục</th>
+                                        <th>Tên món</th>
+                                        <th>Giá (đ)</th>
+                                        <th>Hành động</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="menuTableBody">
+                                    <tr>
+                                        <td colspan="4" style="text-align: center; padding: 20px;">Đang tải dữ liệu...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tab: Order Types Management -->
+                <section id="tab-ordertypes" class="tab-pane hidden" style="display: none;">
+                    <div class="glass-card">
+                        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h3 id="typeStoreTitle">Quản lý Loại Đơn</h3>
+                                <p style="font-size: 13px; color: var(--text-muted); cursor: pointer; text-decoration: underline;" onclick="backToUsers()">⬅ Quay lại danh sách cửa hàng</p>
+                            </div>
+                            <button class="btn btn-primary" onclick="openOrderTypeModal()">+ Thêm Loại Đơn</button>
+                        </div>
+                        
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Tên Loại Đơn</th>
+                                        <th>Cần Địa Chỉ?</th>
+                                        <th>Cần Giờ Lấy?</th>
+                                        <th>Hành động</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="typeTableBody">
+                                    <tr>
+                                        <td colspan="4" style="text-align: center; padding: 20px;">Đang tải dữ liệu...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal User Form -->
+    <div id="userModal" class="modal hidden">
+        <div class="modal-content glass-card" style="max-width: 600px;">
+            <h3 id="modalTitle">Thêm Cửa Hàng Mới</h3>
+            
+            <input type="hidden" id="editUserId">
+            
+            <div class="form-grid">
+                <div class="input-group">
+                    <label for="modalUsername">Tên đăng nhập *</label>
+                    <input type="text" id="modalUsername" placeholder="Nhập tên đăng nhập...">
+                </div>
+                <div class="input-group">
+                    <label for="modalPassword">Mật khẩu *</label>
+                    <input type="text" id="modalPassword" placeholder="Nhập mật khẩu...">
+                </div>
+                <div class="input-group">
+                    <label for="modalStoreName">Tên Cửa hàng</label>
+                    <input type="text" id="modalStoreName" placeholder="Vd: HOME CHICKEN 2">
+                </div>
+                <div class="input-group">
+                    <label for="modalStorePhone">Số điện thoại</label>
+                    <input type="text" id="modalStorePhone" placeholder="Vd: 0987654321">
+                </div>
+                <div class="input-group full-width">
+                    <label for="modalStoreAddress">Địa chỉ</label>
+                    <input type="text" id="modalStoreAddress" placeholder="Nhập địa chỉ cửa hàng...">
+                </div>
+                <div class="input-group full-width">
+                    <label for="modalStoreFb">Facebook / Ghi chú thêm</label>
+                    <input type="text" id="modalStoreFb" placeholder="Link hoặc text hiển thị FB...">
+                </div>
+            </div>
+            
+            <div class="modal-actions" style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" onclick="closeUserModal()">Hủy</button>
+                <button class="btn btn-primary" id="btnSaveUser" onclick="saveUser()">
+                    <span>Lưu Cửa Hàng</span>
+                    <div class="btn-spinner hidden"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Menu Form -->
+    <div id="menuModal" class="modal hidden">
+        <div class="modal-content glass-card" style="max-width: 500px;">
+            <h3 id="modalMenuTitle">Thêm Món Mới</h3>
+            
+            <input type="hidden" id="editMenuId">
+            
+            <div class="form-grid single-col">
+                <div class="input-group">
+                    <label for="modalMenuCategory">Danh mục *</label>
+                    <input type="text" id="modalMenuCategory" placeholder="Vd: Gà rán, Đồ uống...">
+                </div>
+                <div class="input-group">
+                    <label for="modalMenuName">Tên món *</label>
+                    <input type="text" id="modalMenuName" placeholder="Tên món ăn...">
+                </div>
+                <div class="input-group">
+                    <label for="modalMenuPrice">Giá bán (đ) *</label>
+                    <input type="number" id="modalMenuPrice" placeholder="Vd: 35000">
+                </div>
+            </div>
+            
+            <div class="modal-actions" style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" onclick="closeMenuModal()">Hủy</button>
+                <button class="btn btn-primary" id="btnSaveMenu" onclick="saveMenu()">
+                    <span>Lưu Món</span>
+                    <div class="btn-spinner hidden"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Order Type Form -->
+    <div id="typeModal" class="modal hidden">
+        <div class="modal-content glass-card" style="max-width: 500px;">
+            <h3 id="modalTypeTitle">Thêm Loại Đơn Mới</h3>
+            
+            <input type="hidden" id="editTypeId">
+            
+            <div class="form-grid single-col">
+                <div class="input-group">
+                    <label for="modalTypeName">Tên loại đơn *</label>
+                    <input type="text" id="modalTypeName" placeholder="Vd: 🛵 Ship Mang Về, 🏍️ Grab...">
+                </div>
+                <div class="input-group" style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
+                    <input type="checkbox" id="modalTypeRequireAddress" style="width: 20px; height: 20px;">
+                    <label for="modalTypeRequireAddress" style="margin-bottom: 0;">Yêu cầu nhập Địa chỉ giao hàng</label>
+                </div>
+                <div class="input-group" style="display: flex; align-items: center; gap: 10px; margin-top: 5px;">
+                    <input type="checkbox" id="modalTypeRequireTime" style="width: 20px; height: 20px;">
+                    <label for="modalTypeRequireTime" style="margin-bottom: 0;">Yêu cầu nhập Giờ tới lấy</label>
+                </div>
+            </div>
+            
+            <div class="modal-actions" style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="closeOrderTypeModal()">Hủy</button>
+                <button class="btn btn-primary" id="btnSaveType" onclick="saveOrderType()">
+                    <span>Lưu Loại Đơn</span>
+                    <div class="btn-spinner hidden"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>

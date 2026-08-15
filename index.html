@@ -20,16 +20,23 @@
 
     <div class="header" style="display: flex; justify-content: space-between; align-items: center; padding: 0 15px;">
         <span>HOME CHICKEN POS</span>
-        <button id="btnLogout" class="btn btn-clear btn-sm"
-            style="display: none; width: auto; padding: 5px 10px; display: flex; align-items: center; justify-content: center;"
-            onclick="handleLogout()" title="Đăng xuất">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-            </svg>
-        </button>
+        <div style="display: flex; gap: 8px;">
+            <button id="btnAdmin" class="btn btn-primary btn-sm"
+                style="display: none; width: auto; padding: 5px 10px; display: flex; align-items: center; justify-content: center;"
+                onclick="window.location.href='admin/index.html'" title="Cài đặt Admin">
+                ⚙️ Admin
+            </button>
+            <button id="btnLogout" class="btn btn-clear btn-sm"
+                style="display: none; width: auto; padding: 5px 10px; display: flex; align-items: center; justify-content: center;"
+                onclick="handleLogout()" title="Đăng xuất">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+            </button>
+        </div>
     </div>
 
     <!-- GIAO DIỆN ĐĂNG NHẬP / ĐĂNG KÝ -->
@@ -124,8 +131,7 @@
                     <div class="form-row">
                         <label for="orderType">Loại đơn:</label>
                         <select id="orderType" onchange="toggleOrderFields()">
-                            <option value="SHIP MANG VỀ">🛵 SHIP MANG VỀ</option>
-                            <option value="KHÁCH TỚI LẤY">🛍️ KHÁCH TỚI LẤY</option>
+                            <option value="">Đang tải...</option>
                         </select>
                     </div>
                     <div class="form-row">
@@ -366,10 +372,10 @@
     <!-- Mẫu hóa đơn xem trước khi in -->
     <div id="receipt-print">
         <div class="receipt-header">
-            <h2 style="font-size: 16px;">HOME CHICKEN</h2>
-            <p>ĐC: 01 Cao Thắng - P. Kon Tum - T. Quảng Ngãi</p>
-            <p>SĐT: 0392 375 906</p>
-            <p>FB: Ngô Thị Thảo Ni</p>
+            <h2 id="printStoreName" style="font-size: 16px;"></h2>
+            <p id="printStoreAddress"></p>
+            <p id="printStorePhone"></p>
+            <p id="printStoreFb"></p>
             <div class="line"></div>
             <p><b id="printOrderType" style="font-size: 14px;">[ HÓA ĐƠN THANH TOÁN ]</b></p>
             <div id="printCustomerInfo" style="text-align: left; font-size: 11px; margin-top: 5px; line-height: 1.4;">

@@ -22,9 +22,16 @@ function initAuth() {
 function showMainApp() {
     document.getElementById('auth-container').style.display = 'none';
     document.getElementById('main-app-container').style.display = 'block';
-    document.getElementById('btnLogout').style.display = 'block';
+    document.getElementById('btnLogout').style.display = 'flex';
+    
+    if (currentUser && currentUser.username === 'admin') {
+        document.getElementById('btnAdmin').style.display = 'flex';
+    } else {
+        document.getElementById('btnAdmin').style.display = 'none';
+    }
 
     loadMenuFromSupabase();
+    loadOrderTypesFromSupabase();
     loadStockFromSupabase();
     loadSalesHistoryFromSupabase();
     renderOrderTabs();
@@ -35,6 +42,7 @@ function showLoginScreen() {
     document.getElementById('auth-container').style.display = 'flex';
     document.getElementById('main-app-container').style.display = 'none';
     document.getElementById('btnLogout').style.display = 'none';
+    document.getElementById('btnAdmin').style.display = 'none';
 }
 
 function toggleAuthMode() {
@@ -199,6 +207,13 @@ const defaultMenu = [
 ];
 
 let menu = [];
+let storeOrderTypes = [];
+const defaultOrderTypes = [
+    { name: "🛵 SHIP MANG VỀ", require_address: true, require_time: false },
+    { name: "🍽️ ĂN TẠI QUÁN", require_address: false, require_time: false },
+    { name: "🛍️ KHÁCH TỚI LẤY", require_address: false, require_time: true }
+];
+
 let cart = [];
 let salesHistory = [];
 let stockList = [];
@@ -245,7 +260,7 @@ function loadOrderState(index) {
     const order = parkedOrders[index];
     cart = order.cart;
 
-    document.getElementById('orderType').value = order.type || 'SHIP MANG VỀ';
+    document.getElementById('orderType').value = order.type || (storeOrderTypes[0]?.name || '');
     document.getElementById('customerName').value = order.customer || '';
     document.getElementById('customerPhone').value = order.phone || '';
     document.getElementById('customerAddress').value = order.address || '';
@@ -376,12 +391,20 @@ async function printOrderAsBitmap(orderData) {
     // 1. TIÊU ĐỀ HÓA ĐƠN (Tên quán to siêu nổi bật)
     ctx.font = 'bold 36px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('HOME CHICKEN', width / 2, y); y += 46;
+    
+    const storeNameStr = (currentUser && currentUser.store_name) ? currentUser.store_name : 'CỬA HÀNG';
+    ctx.fillText(storeNameStr, width / 2, y); y += 46;
 
     ctx.font = 'bold 24px Arial';
-    ctx.fillText('ĐC: 01 Cao Thắng-P.Kon Tum', width / 2, y); y += 26;
-    ctx.fillText('SĐT: 0392 375 906', width / 2, y); y += 26;
-    ctx.fillText('FB: Ngô Thị Thảo Ni', width / 2, y); y += 30;
+    if (currentUser && currentUser.store_address) {
+        ctx.fillText('ĐC: ' + currentUser.store_address, width / 2, y); y += 26;
+    }
+    if (currentUser && currentUser.store_phone) {
+        ctx.fillText('SĐT: ' + currentUser.store_phone, width / 2, y); y += 26;
+    }
+    if (currentUser && currentUser.store_fb) {
+        ctx.fillText('FB: ' + currentUser.store_fb, width / 2, y); y += 30;
+    }
 
     // Đường kẻ nét đứt
     function drawDashLine(currY) {
@@ -1137,7 +1160,7 @@ function editOrder(orderId) {
         editingOrderId = order.id;
 
         cart = JSON.parse(JSON.stringify(order.items || []));
-        document.getElementById('orderType').value = order.type || 'SHIP MANG VỀ';
+        document.getElementById('orderType').value = order.type || (storeOrderTypes[0]?.name || '');
         document.getElementById('customerName').value = order.customer || '';
         document.getElementById('customerPhone').value = order.phone || '';
         document.getElementById('customerAddress').value = order.address || '';
@@ -1396,14 +1419,16 @@ async function printReceipt() {
     const discountAmount = Math.round((subtotalTotal * discountPercent) / 100);
     const finalTotal = subtotalTotal - discountAmount;
 
+    const typeObj = storeOrderTypes.find(t => t.name === orderType);
+
     const orderRecord = {
         user_id: currentUser.id,
         time: timeStr,
         type: orderType,
         customer: customerName,
         phone: customerPhone,
-        address: orderType === 'SHIP MANG VỀ' ? customerAddress : '',
-        pickup_time: orderType === 'KHÁCH TỚI LẤY' ? pickupTime : '',
+        address: (typeObj && typeObj.require_address) ? customerAddress : '',
+        pickup_time: (typeObj && typeObj.require_time) ? pickupTime : '',
         subtotal: subtotalTotal,
         discount_percent: discountPercent,
         discount_amount: discountAmount,
@@ -1435,12 +1460,19 @@ async function printReceipt() {
         }
     }
 
+    if (currentUser.store_name) document.getElementById('printStoreName').innerText = currentUser.store_name;
+    if (currentUser.store_address) document.getElementById('printStoreAddress').innerText = 'ĐC: ' + currentUser.store_address;
+    if (currentUser.store_phone) document.getElementById('printStorePhone').innerText = 'SĐT: ' + currentUser.store_phone;
+    if (currentUser.store_fb) document.getElementById('printStoreFb').innerText = currentUser.store_fb;
+
     document.getElementById('printOrderType').innerText = "[ " + orderType + " ]";
     let infoHTML = `<b>Khách:</b> ${customerName}<br>`;
     if (customerPhone) infoHTML += `<b>SĐT:</b> ${customerPhone}<br>`;
-    if (orderType === 'SHIP MANG VỀ' && customerAddress) {
+    
+    const typeObjPrint = storeOrderTypes.find(t => t.name === orderType);
+    if (typeObjPrint && typeObjPrint.require_address && customerAddress) {
         infoHTML += `<b>Địa chỉ ship:</b> ${customerAddress}<br>`;
-    } else if (orderType === 'KHÁCH TỚI LẤY' && pickupTime) {
+    } else if (typeObjPrint && typeObjPrint.require_time && pickupTime) {
         infoHTML += `<b>Giờ tới lấy:</b> ${pickupTime}<br>`;
     }
 
@@ -1499,13 +1531,15 @@ function toggleOrderFields() {
     const orderType = document.getElementById('orderType').value;
     const addressRow = document.getElementById('addressRow');
     const pickupTimeRow = document.getElementById('pickupTimeRow');
+    
+    const typeObj = storeOrderTypes.find(t => t.name === orderType);
 
-    if (orderType === 'SHIP MANG VỀ') {
-        addressRow.style.display = 'flex';
-        pickupTimeRow.style.display = 'none';
+    if (typeObj) {
+        addressRow.style.display = typeObj.require_address ? 'flex' : 'none';
+        pickupTimeRow.style.display = typeObj.require_time ? 'flex' : 'none';
     } else {
         addressRow.style.display = 'none';
-        pickupTimeRow.style.display = 'flex';
+        pickupTimeRow.style.display = 'none';
     }
 }
 
@@ -1564,6 +1598,46 @@ function switchTab(tabName) {
     } else {
         stickyBar.style.display = 'none';
     }
+    
+    // Select the first category by default
+    if (categories.length > 0) {
+        selectCategory(categories[0]);
+    }
+}
+
+async function loadOrderTypesFromSupabase() {
+    const { data, error } = await db.from('order_types').select('*').eq('user_id', currentUser.id).order('id', { ascending: true });
+    
+    if (error) {
+        console.error('Error fetching order types:', error);
+        return;
+    }
+    
+    if (data && data.length > 0) {
+        storeOrderTypes = data;
+    } else {
+        await db.from('order_types').insert(defaultOrderTypes.map(item => ({ ...item, user_id: currentUser.id })));
+        const { data: newData } = await db.from('order_types').select('*').eq('user_id', currentUser.id).order('id', { ascending: true });
+        if (newData) storeOrderTypes = newData;
+    }
+    
+    const orderTypeSelect = document.getElementById('orderType');
+    orderTypeSelect.innerHTML = '';
+    storeOrderTypes.forEach(type => {
+        const option = document.createElement('option');
+        option.value = type.name;
+        option.innerText = type.name;
+        orderTypeSelect.appendChild(option);
+    });
+    
+    toggleOrderFields(); // Update UI based on the first selected type
+}
+
+function selectCategory(category) {
+    document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('active'));
+    const btn = document.querySelector(`.cat-btn[onclick="selectCategory('${category}')"]`);
+    if (btn) btn.classList.add('active');
+    renderMenu(category);
 }
 
 function addToCart(index) {
