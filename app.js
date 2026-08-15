@@ -263,6 +263,11 @@ function addNewOrderTab() {
     loadOrderState(parkedOrders.length - 1);
 }
 
+function updateActiveOrderName() {
+    parkedOrders[activeOrderIndex].customer = document.getElementById('customerName').value;
+    renderOrderTabs();
+}
+
 function closeOrderTab(index, event) {
     if (event) event.stopPropagation();
 
@@ -289,13 +294,14 @@ function closeOrderTab(index, event) {
 function renderOrderTabs() {
     const container = document.getElementById('orderTabsContainer');
     if (!container) return;
-
+    
     let html = '';
     parkedOrders.forEach((order, idx) => {
         const isActive = idx === activeOrderIndex ? 'active' : '';
+        const displayName = order.customer ? order.customer : `Đơn ${idx + 1}`;
         html += `
             <div class="order-tab ${isActive}" onclick="switchOrderTab(${idx})">
-                Đơn ${idx + 1}
+                ${displayName}
                 <span class="order-tab-close" onclick="closeOrderTab(${idx}, event)">×</span>
             </div>
         `;
@@ -306,7 +312,9 @@ function renderOrderTabs() {
 
     const headerTitle = document.getElementById('orderHeaderTitle');
     if (headerTitle) {
-        headerTitle.innerText = `Thông Tin Đơn Hàng (Đơn ${activeOrderIndex + 1})`;
+        const activeCustomer = parkedOrders[activeOrderIndex].customer;
+        const activeDisplayName = activeCustomer ? activeCustomer : `Đơn ${activeOrderIndex + 1}`;
+        headerTitle.innerText = `Thông Tin Đơn Hàng (${activeDisplayName})`;
     }
 }
 
