@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title id="pageTitle">Cửa Hàng - Đang Tải...</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="store.css">
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-container">
+        <div class="spinner"></div>
+        <h3>Đang tải thông tin cửa hàng...</h3>
+    </div>
+
+    <!-- Error Screen -->
+    <div id="errorScreen" class="error-container hidden">
+        <div class="error-icon">😢</div>
+        <h2>Không tìm thấy cửa hàng</h2>
+        <p>Đường dẫn không hợp lệ hoặc cửa hàng đã ngưng hoạt động.</p>
+    </div>
+
+    <!-- Main Content -->
+    <div id="mainContent" class="hidden">
+        <!-- Background Elements -->
+        <div class="bg-shape shape-1" id="bgShape1"></div>
+        <div class="bg-shape shape-2"></div>
+
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <img id="heroImage" src="https://images.unsplash.com/photo-1550547660-d9450f859349?ixlib=rb-4.0.3&auto=format&fit=crop&w=1500&q=80" alt="Banner" class="hero-bg">
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+                <h1 id="storeName" class="hero-title">Tên Cửa Hàng</h1>
+                <p id="storeDescription" class="hero-desc">Chào mừng bạn đến với cửa hàng của chúng tôi. Thực đơn đa dạng, phong phú với các món ăn hấp dẫn đang chờ bạn thưởng thức.</p>
+            </div>
+        </section>
+
+        <div class="container">
+            <!-- Store Info Card -->
+            <div class="store-info-card">
+                <div class="info-item" id="infoAddress">
+                    <div class="info-icon">📍</div>
+                    <div class="info-text">
+                        <h4>Địa chỉ</h4>
+                        <p id="storeAddressTxt">Đang cập nhật</p>
+                    </div>
+                </div>
+                <div class="info-item" id="infoPhone">
+                    <div class="info-icon">📞</div>
+                    <div class="info-text">
+                        <h4>Hotline Đặt Hàng</h4>
+                        <p><a href="#" id="storePhoneTxt">Đang cập nhật</a></p>
+                    </div>
+                </div>
+                <div class="info-item" id="infoHours">
+                    <div class="info-icon">⏰</div>
+                    <div class="info-text">
+                        <h4>Giờ Mở Cửa</h4>
+                        <p id="storeHoursTxt">08:00 - 22:00</p>
+                    </div>
+                </div>
+                <div class="info-item" id="infoFb">
+                    <div class="info-icon">📘</div>
+                    <div class="info-text">
+                        <h4>Facebook</h4>
+                        <p><a href="#" target="_blank" id="storeFbTxt">Fanpage Cửa Hàng</a></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Menu Section -->
+            <div class="menu-section">
+                <h2 class="section-title">🍽️ Khám Phá Thực Đơn</h2>
+                
+                <div class="category-filter" id="categoryFilter">
+                    <!-- Categories injected here -->
+                </div>
+
+                <div class="menu-grid" id="menuGrid">
+                    <!-- Menu items injected here -->
+                </div>
+            </div>
+
+            <div class="call-to-action">
+                <a href="#" id="btnCallNow" class="btn-order">
+                    📞 GỌI ĐIỆN ĐẶT HÀNG NGAY
+                </a>
+            </div>
+        </div>
+
+        <footer class="footer">
+            &copy; 2026 Hệ thống POS Home Chicken. Nền tảng quản lý bán hàng chuyên nghiệp.
+        </footer>
+    </div>
+
+    <script>
+        // Supabase config (reuse from app.js)
+        const SUPABASE_URL = 'https://pxixtrwfvyzlvfnkszrm.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_mbWkuvRJYm0U1u5Ngfkulw_W_wVVS-o';
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let storeUser = null;
+        let landingInfo = null;
+        let menuData = [];
+        let categories = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const username = urlParams.get('u');
+            
+            if (!username) {
+                showError();
+            } else {
+                fetchStoreData(username);
+            }
+        });
+
+        async function fetchStoreData(username) {
+            try {
+                // 1. Lấy thông tin user
+                const { data: users, error: userError } = await db.from('users')
+                    .select('id, username, store_name, store_address, store_phone, store_fb, store_fb_url')
+                    .eq('username', username)
+                    .limit(1);
+
+                if (userError || !users || users.length === 0) {
+                    showError();
+                    return;
+                }
+
+                storeUser = users[0];
+
+                // 2. Lấy thông tin landing page
+                const { data: landingData } = await db.from('landing_pages')
+                    .select('*')
+                    .eq('user_id', storeUser.id)
+                    .limit(1);
+
+                if (landingData && landingData.length > 0) {
+                    landingInfo = landingData[0];
+                }
+
+                // 3. Lấy menu
+                const { data: menuItems } = await db.from('menu')
+                    .select('*')
+                    .eq('user_id', storeUser.id)
+                    .order('category', { ascending: true })
+                    .order('name', { ascending: true });
+
+                if (menuItems) {
+                    menuData = menuItems;
+                    // Lấy danh sách danh mục duy nhất
+                    const catSet = new Set(menuData.map(item => item.category));
+                    categories = Array.from(catSet);
+                }
+
+                renderPage();
+
+            } catch (err) {
+                console.error(err);
+                showError();
+            }
+        }
+
+        function renderPage() {
+            document.getElementById('loadingScreen').classList.add('hidden');
+            document.getElementById('mainContent').classList.remove('hidden');
+
+            // Cập nhật Tên cửa hàng & Meta
+            const displayName = storeUser.store_name || storeUser.username;
+            document.getElementById('pageTitle').innerText = displayName + ' - Thực Đơn';
+            document.getElementById('storeName').innerText = displayName;
+
+            // Cập nhật Info Cơ bản
+            if (storeUser.store_address) {
+                document.getElementById('storeAddressTxt').innerText = storeUser.store_address;
+            } else {
+                document.getElementById('infoAddress').style.display = 'none';
+            }
+
+            if (storeUser.store_phone) {
+                document.getElementById('storePhoneTxt').innerText = storeUser.store_phone;
+                document.getElementById('storePhoneTxt').href = 'tel:' + storeUser.store_phone;
+                document.getElementById('btnCallNow').href = 'tel:' + storeUser.store_phone;
+            } else {
+                document.getElementById('infoPhone').style.display = 'none';
+                document.getElementById('btnCallNow').style.display = 'none';
+            }
+
+            if (storeUser.store_fb) {
+                document.getElementById('storeFbTxt').innerText = storeUser.store_fb;
+                
+                if (storeUser.store_fb_url) {
+                    document.getElementById('storeFbTxt').href = storeUser.store_fb_url;
+                } else if (storeUser.store_fb.includes('http')) {
+                    document.getElementById('storeFbTxt').href = storeUser.store_fb;
+                } else {
+                    document.getElementById('storeFbTxt').href = "javascript:void(0)";
+                    document.getElementById('storeFbTxt').style.textDecoration = 'none';
+                    document.getElementById('storeFbTxt').style.color = 'var(--text-main)';
+                }
+            } else {
+                document.getElementById('infoFb').style.display = 'none';
+            }
+
+            // Cập nhật Landing Info (nếu có)
+            if (landingInfo) {
+                if (landingInfo.hero_image) {
+                    document.getElementById('heroImage').src = landingInfo.hero_image;
+                }
+                if (landingInfo.description) {
+                    document.getElementById('storeDescription').innerText = landingInfo.description;
+                }
+                if (landingInfo.opening_hours) {
+                    document.getElementById('storeHoursTxt').innerText = landingInfo.opening_hours;
+                } else {
+                    document.getElementById('infoHours').style.display = 'none';
+                }
+                if (landingInfo.theme_color) {
+                    document.documentElement.style.setProperty('--primary', landingInfo.theme_color);
+                    document.getElementById('bgShape1').style.background = landingInfo.theme_color;
+                }
+            } else {
+                document.getElementById('infoHours').style.display = 'none';
+            }
+
+            // Render Menu Categories
+            const filterContainer = document.getElementById('categoryFilter');
+            filterContainer.innerHTML = '';
+            
+            categories.forEach((cat, index) => {
+                const btn = document.createElement('button');
+                btn.className = `cat-btn ${index === 0 ? 'active' : ''}`;
+                btn.innerText = cat;
+                btn.onclick = () => selectCategory(cat, btn);
+                filterContainer.appendChild(btn);
+            });
+
+            // Mặc định chọn danh mục đầu tiên
+            if (categories.length > 0) {
+                renderMenuItems(categories[0]);
+            } else {
+                document.getElementById('menuGrid').innerHTML = '<p style="grid-column: 1/-1; text-align: center; padding: 20px;">Cửa hàng chưa có món ăn nào.</p>';
+            }
+        }
+
+        function selectCategory(cat, btnElement) {
+            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+            btnElement.classList.add('active');
+            renderMenuItems(cat);
+        }
+
+        function renderMenuItems(category) {
+            const grid = document.getElementById('menuGrid');
+            grid.innerHTML = '';
+            
+            const items = menuData.filter(i => i.category === category);
+            
+            items.forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'menu-item';
+                el.innerHTML = `
+                    <div class="item-info">
+                        <h4>${item.name}</h4>
+                        <p>${category}</p>
+                    </div>
+                    <div class="item-price">${item.price.toLocaleString('vi-VN')} đ</div>
+                `;
+                grid.appendChild(el);
+            });
+        }
+
+        function showError() {
+            document.getElementById('loadingScreen').classList.add('hidden');
+            document.getElementById('errorScreen').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>

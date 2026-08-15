@@ -114,6 +114,34 @@
                     </div>
                 </section>
 
+                <!-- Tab: Landing Page Management -->
+                <section id="tab-landing" class="tab-pane hidden" style="display: none;">
+                    <div class="glass-card">
+                        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h3 id="landingStoreTitle">Quản lý Landing Page</h3>
+                                <p style="font-size: 13px; color: var(--text-muted); cursor: pointer; text-decoration: underline;" onclick="backToUsers()">⬅ Quay lại danh sách cửa hàng</p>
+                            </div>
+                            <button class="btn btn-primary" onclick="openLandingModal()">Chỉnh sửa Trang</button>
+                        </div>
+                        
+                        <div class="table-container" style="padding: 20px;">
+                            <div style="background: rgba(255,255,255,0.5); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                                <p><strong>Link trang khách:</strong> <a href="#" id="landingPreviewLink" target="_blank" style="color: var(--primary); font-weight: bold; text-decoration: none;">Đang tải...</a></p>
+                            </div>
+                            
+                            <table class="data-table">
+                                <tbody id="landingPreviewTable">
+                                    <tr><td style="width: 150px; font-weight: 600; color: var(--text-muted);">Ảnh Bìa</td><td id="lpImgPreview">-</td></tr>
+                                    <tr><td style="font-weight: 600; color: var(--text-muted);">Mô tả</td><td id="lpDescPreview">-</td></tr>
+                                    <tr><td style="font-weight: 600; color: var(--text-muted);">Giờ mở cửa</td><td id="lpHoursPreview">-</td></tr>
+                                    <tr><td style="font-weight: 600; color: var(--text-muted);">Màu chủ đạo</td><td id="lpColorPreview">-</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Tab: Order Types Management -->
                 <section id="tab-ordertypes" class="tab-pane hidden" style="display: none;">
                     <div class="glass-card">
@@ -176,9 +204,13 @@
                     <label for="modalStoreAddress">Địa chỉ</label>
                     <input type="text" id="modalStoreAddress" placeholder="Nhập địa chỉ cửa hàng...">
                 </div>
-                <div class="input-group full-width">
-                    <label for="modalStoreFb">Facebook / Ghi chú thêm</label>
-                    <input type="text" id="modalStoreFb" placeholder="Link hoặc text hiển thị FB...">
+                <div class="input-group">
+                    <label for="modalStoreFb">Tên hiển thị Facebook</label>
+                    <input type="text" id="modalStoreFb" placeholder="Vd: Quán Gà Rán Ngon">
+                </div>
+                <div class="input-group">
+                    <label for="modalStoreFbUrl">Link Fanpage (URL)</label>
+                    <input type="text" id="modalStoreFbUrl" placeholder="https://facebook.com/...">
                 </div>
             </div>
             
@@ -218,6 +250,42 @@
                 <button class="btn btn-secondary" onclick="closeMenuModal()">Hủy</button>
                 <button class="btn btn-primary" id="btnSaveMenu" onclick="saveMenu()">
                     <span>Lưu Món</span>
+                    <div class="btn-spinner hidden"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Landing Page Form -->
+    <div id="landingModal" class="modal hidden">
+        <div class="modal-content glass-card" style="max-width: 600px;">
+            <h3 id="modalLandingTitle">Chỉnh Sửa Landing Page</h3>
+            
+            <input type="hidden" id="editLandingId">
+            
+            <div class="form-grid single-col">
+                <div class="input-group">
+                    <label for="modalLandingImg">Link Ảnh Bìa (URL)</label>
+                    <input type="text" id="modalLandingImg" placeholder="https://domain.com/image.jpg">
+                </div>
+                <div class="input-group">
+                    <label for="modalLandingDesc">Mô tả ngắn</label>
+                    <input type="text" id="modalLandingDesc" placeholder="Lời chào mừng ngắn gọn...">
+                </div>
+                <div class="input-group">
+                    <label for="modalLandingHours">Giờ mở cửa</label>
+                    <input type="text" id="modalLandingHours" placeholder="Vd: 08:00 - 22:00">
+                </div>
+                <div class="input-group">
+                    <label for="modalLandingColor">Màu chủ đạo (Hex)</label>
+                    <input type="color" id="modalLandingColor" value="#f97316" style="padding: 0; height: 40px; cursor: pointer;">
+                </div>
+            </div>
+            
+            <div class="modal-actions" style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="closeLandingModal()">Hủy</button>
+                <button class="btn btn-primary" id="btnSaveLanding" onclick="saveLandingPage()">
+                    <span>Lưu Cấu Hình</span>
                     <div class="btn-spinner hidden"></div>
                 </button>
             </div>

@@ -14,6 +14,10 @@ let currentStoreMenu = [];
 let currentStoreForTypes = null;
 let currentStoreTypes = [];
 
+let currentStoreForLanding = null;
+let currentStoreLandingInfo = null;
+let currentStoreUsername = null;
+
 // =========================================================================
 // 🚀 INIT & AUTH
 // =========================================================================
@@ -89,6 +93,7 @@ function renderUserTable() {
                     <button class="btn btn-secondary btn-sm" onclick="editUser('${user.id}')">✏️ Sửa</button>
                     <button class="btn btn-primary btn-sm" style="background: var(--primary);" onclick="openMenuManager('${user.id}', '${safeStoreName}')">🍔 QL Menu</button>
                     <button class="btn btn-primary btn-sm" style="background: #eab308; color: #000;" onclick="openOrderTypeManager('${user.id}', '${safeStoreName}')">📦 QL Loại Đơn</button>
+                    <button class="btn btn-primary btn-sm" style="background: #10b981; color: #fff;" onclick="openLandingManager('${user.id}', '${safeStoreName}')">🌐 QL Landing Page</button>
                     <button class="btn btn-primary btn-sm" style="background: var(--error);" onclick="deleteUser('${user.id}', '${user.username.replace(/'/g, "\\'")}')">🗑️ Xóa</button>
                 </div>
                 `}
@@ -110,6 +115,7 @@ function openUserModal() {
     document.getElementById('modalStorePhone').value = '';
     document.getElementById('modalStoreAddress').value = '';
     document.getElementById('modalStoreFb').value = '';
+    document.getElementById('modalStoreFbUrl').value = '';
     
     document.getElementById('userModal').classList.remove('hidden');
 }
@@ -130,6 +136,7 @@ function editUser(id) {
     document.getElementById('modalStorePhone').value = user.store_phone || '';
     document.getElementById('modalStoreAddress').value = user.store_address || '';
     document.getElementById('modalStoreFb').value = user.store_fb || '';
+    document.getElementById('modalStoreFbUrl').value = user.store_fb_url || '';
     
     document.getElementById('userModal').classList.remove('hidden');
 }
@@ -143,6 +150,7 @@ async function saveUser() {
     const store_phone = document.getElementById('modalStorePhone').value.trim();
     const store_address = document.getElementById('modalStoreAddress').value.trim();
     const store_fb = document.getElementById('modalStoreFb').value.trim();
+    const store_fb_url = document.getElementById('modalStoreFbUrl').value.trim();
     
     if (!username || !password) {
         showToast('Tên đăng nhập và mật khẩu không được bỏ trống!', 'error');
@@ -163,7 +171,8 @@ async function saveUser() {
         store_name,
         store_phone,
         store_address,
-        store_fb
+        store_fb,
+        store_fb_url
     };
     
     try {
@@ -323,6 +332,9 @@ function backToUsers() {
     
     document.getElementById('tab-ordertypes').classList.add('hidden');
     document.getElementById('tab-ordertypes').style.display = 'none';
+
+    document.getElementById('tab-landing').classList.add('hidden');
+    document.getElementById('tab-landing').style.display = 'none';
     
     document.getElementById('tab-users').classList.remove('hidden');
     document.getElementById('tab-users').style.display = 'block';
@@ -681,7 +693,141 @@ async function deleteOrderType(id, name) {
 }
 
 // =========================================================================
-// 🔔 UTILS
+// 🌐 LANDING PAGE MANAGEMENT
+// =========================================================================
+async function openLandingManager(userId, storeName) {
+    currentStoreForLanding = isNaN(userId) ? userId : parseInt(userId, 10);
+    const user = allUsers.find(u => u.id == userId);
+    currentStoreUsername = user ? user.username : '';
+    
+    document.getElementById('landingStoreTitle').innerText = 'Landing Page: ' + storeName;
+    
+    // Switch Tabs
+    document.getElementById('tab-users').classList.add('hidden');
+    document.getElementById('tab-users').style.display = 'none';
+    
+    document.getElementById('tab-menu').classList.add('hidden');
+    document.getElementById('tab-menu').style.display = 'none';
+    
+    document.getElementById('tab-ordertypes').classList.add('hidden');
+    document.getElementById('tab-ordertypes').style.display = 'none';
+    
+    document.getElementById('tab-landing').classList.remove('hidden');
+    document.getElementById('tab-landing').style.display = 'block';
+
+    const link = window.location.origin + window.location.pathname.replace('/admin/index.html', '') + '/store.html?u=' + currentStoreUsername;
+    document.getElementById('landingPreviewLink').innerText = link;
+    document.getElementById('landingPreviewLink').href = link;
+
+    await loadLandingInfo();
+}
+
+async function loadLandingInfo() {
+    document.getElementById('lpImgPreview').innerText = 'Đang tải...';
+    document.getElementById('lpDescPreview').innerText = 'Đang tải...';
+    document.getElementById('lpHoursPreview').innerText = 'Đang tải...';
+    document.getElementById('lpColorPreview').innerText = 'Đang tải...';
+
+    const { data, error } = await db.from('landing_pages').select('*').eq('user_id', currentStoreForLanding).limit(1);
+    
+    if (error) {
+        console.error('Error fetching landing page:', error);
+        showToast('Lỗi tải Landing Page!', 'error');
+        return;
+    }
+    
+    if (data && data.length > 0) {
+        currentStoreLandingInfo = data[0];
+    } else {
+        currentStoreLandingInfo = null;
+    }
+    
+    renderLandingPreview();
+}
+
+function renderLandingPreview() {
+    if (!currentStoreLandingInfo) {
+        document.getElementById('lpImgPreview').innerText = '- Chưa cấu hình -';
+        document.getElementById('lpDescPreview').innerText = '- Chưa cấu hình -';
+        document.getElementById('lpHoursPreview').innerText = '- Chưa cấu hình -';
+        document.getElementById('lpColorPreview').innerText = '- Chưa cấu hình -';
+        return;
+    }
+
+    const info = currentStoreLandingInfo;
+    document.getElementById('lpImgPreview').innerHTML = info.hero_image ? `<img src="${info.hero_image}" style="max-height: 50px; border-radius: 8px;">` : 'Không có';
+    document.getElementById('lpDescPreview').innerText = info.description || 'Không có';
+    document.getElementById('lpHoursPreview').innerText = info.opening_hours || 'Không có';
+    document.getElementById('lpColorPreview').innerHTML = info.theme_color ? `<div style="display:flex; align-items:center; gap:5px;"><div style="width:20px;height:20px;border-radius:4px;background:${info.theme_color};"></div>${info.theme_color}</div>` : 'Mặc định';
+}
+
+function openLandingModal() {
+    document.getElementById('modalLandingTitle').innerText = currentStoreLandingInfo ? 'Chỉnh Sửa Landing Page' : 'Khởi Tạo Landing Page';
+    
+    document.getElementById('editLandingId').value = currentStoreLandingInfo ? currentStoreLandingInfo.id : '';
+    document.getElementById('modalLandingImg').value = currentStoreLandingInfo?.hero_image || '';
+    document.getElementById('modalLandingDesc').value = currentStoreLandingInfo?.description || '';
+    document.getElementById('modalLandingHours').value = currentStoreLandingInfo?.opening_hours || '';
+    document.getElementById('modalLandingColor').value = currentStoreLandingInfo?.theme_color || '#f97316';
+    
+    document.getElementById('landingModal').classList.remove('hidden');
+}
+
+function closeLandingModal() {
+    document.getElementById('landingModal').classList.add('hidden');
+}
+
+async function saveLandingPage() {
+    const editId = document.getElementById('editLandingId').value;
+    const hero_image = document.getElementById('modalLandingImg').value.trim();
+    const description = document.getElementById('modalLandingDesc').value.trim();
+    const opening_hours = document.getElementById('modalLandingHours').value.trim();
+    const theme_color = document.getElementById('modalLandingColor').value.trim();
+    
+    const payload = {
+        user_id: currentStoreForLanding,
+        hero_image,
+        description,
+        opening_hours,
+        theme_color
+    };
+    
+    const btn = document.getElementById('btnSaveLanding');
+    btn.classList.add('loading');
+    btn.disabled = true;
+    
+    try {
+        if (editId) {
+            const { error } = await db.from('landing_pages').update(payload).eq('id', editId);
+            if (error) throw error;
+            showToast('Đã cập nhật Landing Page!', 'success');
+        } else {
+            const { error } = await db.from('landing_pages').insert([payload]);
+            if (error) throw error;
+            showToast('Đã khởi tạo Landing Page!', 'success');
+        }
+        
+        closeLandingModal();
+        await loadLandingInfo();
+        
+    } catch (error) {
+        console.error('Lỗi lưu Landing Page:', error);
+        showToast('Lỗi: ' + error.message, 'error');
+    } finally {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+    }
+}
+
+function copyLandingLink() {
+    const link = document.getElementById('landingPreviewLink').href;
+    navigator.clipboard.writeText(link).then(() => {
+        showToast('Đã copy link!', 'success');
+    });
+}
+
+// =========================================================================
+// 🛠️ UTILS
 // =========================================================================
 let toastTimeout;
 function showToast(message, type = 'success') {
