@@ -187,7 +187,7 @@ const defaultMenu = [
     { category: "Món Thêm", name: "Thêm Chả Cá", price: 10000 },
     { category: "Món Thêm", name: "Thêm Phô Mai kéo sợi", price: 10000 },
     { category: "Món Thêm", name: "Thêm Phô Mai cheddar", price: 10000 },
-    { category: "Khác", name: "Phí ship", price: 1000 }
+    { category: "Khác", name: "Phí ship", price: 10000 }
 ];
 
 let menu = [];
