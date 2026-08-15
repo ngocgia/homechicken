@@ -32,7 +32,7 @@ function showMainApp() {
 
 function showLoginScreen() {
     currentUser = null;
-    document.getElementById('auth-container').style.display = 'block';
+    document.getElementById('auth-container').style.display = 'flex';
     document.getElementById('main-app-container').style.display = 'none';
     document.getElementById('btnLogout').style.display = 'none';
 }
@@ -54,12 +54,20 @@ function toggleAuthMode() {
     }
 }
 
+
+function showAuthLoading(show) {
+    const overlay = document.getElementById('authLoadingOverlay');
+    if (overlay) overlay.style.display = show ? 'flex' : 'none';
+}
+
 async function handleAuthSubmit() {
+    showAuthLoading(true);
     const username = document.getElementById('authUsername').value.trim();
     const password = document.getElementById('authPassword').value;
 
     if (!username || !password) {
         alert('Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!');
+        showAuthLoading(false);
         return;
     }
 

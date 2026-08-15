@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Home Chicken POS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
     <link rel="apple-touch-icon" type="image/x-icon" href="favicon.ico">
@@ -27,22 +28,34 @@
 </div>
 
 <!-- GIAO DIỆN ĐĂNG NHẬP / ĐĂNG KÝ -->
-<div id="auth-container" class="auth-container" style="padding: 20px;">
-    <div class="card auth-card" style="max-width: 400px; margin: 50px auto;">
-        <h2 id="authTitle" style="text-align: center; margin-bottom: 20px; font-size: 20px; color: #d35400;">Đăng Nhập POS</h2>
-        <div class="info-form">
-            <div class="form-row">
-                <label for="authUsername">Tên đăng nhập:</label>
-                <input type="text" id="authUsername" placeholder="Nhập tên đăng nhập...">
-            </div>
-            <div class="form-row">
-                <label for="authPassword">Mật khẩu:</label>
-                <input type="password" id="authPassword" placeholder="Nhập mật khẩu...">
-            </div>
-            <button id="btnAuthSubmit" class="btn btn-primary" style="margin-top: 10px;" onclick="handleAuthSubmit()">Đăng Nhập</button>
-            <div style="text-align: center; margin-top: 15px;">
-                <span id="authToggleText" style="color: #3498db; cursor: pointer; font-size: 14px;" onclick="toggleAuthMode()">Chưa có tài khoản? Đăng ký ngay.</span>
-            </div>
+<div id="auth-container" class="auth-container" style="display: none;">
+    <div class="auth-shape-1"></div>
+    <div class="auth-shape-2"></div>
+
+    <div class="auth-card">
+        <div id="authLoadingOverlay">
+            <div class="auth-spinner"></div>
+        </div>
+
+        <div class="auth-logo-container">
+            <span class="auth-logo-icon">🍗</span>
+            <h2 id="authTitle">Đăng Nhập POS</h2>
+            <p class="subtitle">Hệ thống quản lý Home Chicken POS</p>
+        </div>
+
+        <div class="auth-input-group">
+            <label for="authUsername">Tên đăng nhập</label>
+            <input type="text" id="authUsername" placeholder="Nhập tên đăng nhập..." autocomplete="off">
+        </div>
+        <div class="auth-input-group">
+            <label for="authPassword">Mật khẩu</label>
+            <input type="password" id="authPassword" placeholder="Nhập mật khẩu...">
+        </div>
+        
+        <button id="btnAuthSubmit" class="auth-btn-submit" onclick="handleAuthSubmit()">Đăng Nhập</button>
+        
+        <div class="auth-toggle-mode">
+            <span id="authToggleText" onclick="toggleAuthMode()">Chưa có tài khoản? Đăng ký ngay</span>
         </div>
     </div>
 </div>
