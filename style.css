@@ -505,3 +505,16 @@ h2 {
     .receipt-note { font-size: 10px; font-style: italic; color: #333; padding-left: 5px; }
     .line { border-bottom: 1px dashed #000; margin: 4px 0; }
 }
+
+/* Auth UI */
+.auth-container { display: flex; justify-content: center; align-items: center; min-height: 80vh; }
+.auth-card { padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; }
+
+
+/* Order Tabs UI */
+.order-tabs-container { display: flex; overflow-x: auto; padding-bottom: 10px; margin-bottom: 15px; border-bottom: 2px solid #ecf0f1; }
+.order-tab { padding: 8px 15px; margin-right: 8px; background: #ecf0f1; border-radius: 8px 8px 0 0; cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 8px; font-weight: 500; color: #7f8c8d; }
+.order-tab.active { background: #d35400; color: white; }
+.order-tab-close { font-size: 16px; font-weight: bold; cursor: pointer; padding: 0 4px; border-radius: 50%; line-height: 1; }
+.order-tab-close:hover { background: rgba(0,0,0,0.1); }
+.btn-add-order { background: #27ae60; color: white; border: none; padding: 8px 12px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: bold; }

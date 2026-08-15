@@ -6,6 +6,116 @@ const SUPABASE_ANON_KEY = 'sb_publishable_mbWkuvRJYm0U1u5Ngfkulw_W_wVVS-o'; // D
 
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+let currentUser = null;
+let isLoginMode = true;
+
+function initAuth() {
+    const savedUser = localStorage.getItem('pos_current_user');
+    if (savedUser) {
+        currentUser = JSON.parse(savedUser);
+        showMainApp();
+    } else {
+        showLoginScreen();
+    }
+}
+
+function showMainApp() {
+    document.getElementById('auth-container').style.display = 'none';
+    document.getElementById('main-app-container').style.display = 'block';
+    document.getElementById('btnLogout').style.display = 'block';
+
+    loadMenuFromSupabase();
+    loadStockFromSupabase();
+    loadSalesHistoryFromSupabase();
+    renderOrderTabs();
+}
+
+function showLoginScreen() {
+    currentUser = null;
+    document.getElementById('auth-container').style.display = 'block';
+    document.getElementById('main-app-container').style.display = 'none';
+    document.getElementById('btnLogout').style.display = 'none';
+}
+
+function toggleAuthMode() {
+    isLoginMode = !isLoginMode;
+    const title = document.getElementById('authTitle');
+    const btnSubmit = document.getElementById('btnAuthSubmit');
+    const toggleText = document.getElementById('authToggleText');
+
+    if (isLoginMode) {
+        title.innerText = 'Đăng Nhập POS';
+        btnSubmit.innerText = 'Đăng Nhập';
+        toggleText.innerText = 'Chưa có tài khoản? Đăng ký ngay.';
+    } else {
+        title.innerText = 'Đăng Ký Tài Khoản';
+        btnSubmit.innerText = 'Đăng Ký';
+        toggleText.innerText = 'Đã có tài khoản? Đăng nhập ngay.';
+    }
+}
+
+async function handleAuthSubmit() {
+    const username = document.getElementById('authUsername').value.trim();
+    const password = document.getElementById('authPassword').value;
+
+    if (!username || !password) {
+        alert('Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!');
+        return;
+    }
+
+    if (isLoginMode) {
+        // Đăng nhập
+        const { data, error } = await db.from('users').select('*').eq('username', username).eq('password', password);
+        if (error) {
+            alert('Lỗi truy vấn: ' + error.message);
+            return;
+        }
+
+        if (data && data.length > 0) {
+            currentUser = data[0];
+            localStorage.setItem('pos_current_user', JSON.stringify(currentUser));
+            showMainApp();
+        } else {
+            alert('Tên đăng nhập hoặc mật khẩu không đúng!');
+        }
+    } else {
+        // Đăng ký
+        // Kiểm tra xem username đã tồn tại chưa
+        const { data: existData, error: existError } = await db.from('users').select('*').eq('username', username);
+        if (existError) {
+            alert('Lỗi truy vấn: ' + existError.message);
+            return;
+        }
+        if (existData && existData.length > 0) {
+            alert('Tên đăng nhập này đã có người sử dụng. Vui lòng chọn tên khác!');
+            return;
+        }
+
+        // Thêm user mới
+        const { data, error } = await db.from('users').insert([{ username, password }]).select();
+        if (error) {
+            alert('Lỗi đăng ký: ' + error.message);
+        } else {
+            alert('Đăng ký thành công! Đang tự động đăng nhập...');
+            if (data && data.length > 0) {
+                currentUser = data[0];
+                localStorage.setItem('pos_current_user', JSON.stringify(currentUser));
+                showMainApp();
+            }
+        }
+    }
+}
+
+function handleLogout() {
+    if (confirm('Bạn có chắc muốn đăng xuất?')) {
+        localStorage.removeItem('pos_current_user');
+        showLoginScreen();
+    }
+}
+
+// Khởi tạo trạng thái đăng nhập khi tải trang
+
+
 const defaultMenu = [
     { category: "Gà Viên Sốt", name: "Gà Viên Sốt Cay Ngọt", price: 40000 },
     { category: "Gà Viên Sốt", name: "Gà Viên Sốt Chua Ngọt", price: 40000 },
@@ -98,9 +208,117 @@ document.getElementById('filterStartDate').value = todayStr;
 document.getElementById('filterEndDate').value = todayStr;
 
 // Đóng popup khi chạm ra ngoài
-document.addEventListener('click', function(e) {
-    if (!e.target.classList.contains('menu-dots-btn') && 
-        !e.target.classList.contains('action-dots-btn') && 
+
+let parkedOrders = [{
+    cart: [],
+    type: 'SHIP MANG VỀ',
+    customer: '',
+    phone: '',
+    address: '',
+    pickupTime: '',
+    discount: ''
+}];
+let activeOrderIndex = 0;
+
+function saveCurrentOrderState() {
+    parkedOrders[activeOrderIndex] = {
+        cart: cart,
+        type: document.getElementById('orderType').value,
+        customer: document.getElementById('customerName').value,
+        phone: document.getElementById('customerPhone').value,
+        address: document.getElementById('customerAddress').value,
+        pickupTime: document.getElementById('pickupTime').value,
+        discount: document.getElementById('discountInput').value
+    };
+}
+
+function loadOrderState(index) {
+    activeOrderIndex = index;
+    const order = parkedOrders[index];
+    cart = order.cart;
+
+    document.getElementById('orderType').value = order.type || 'SHIP MANG VỀ';
+    document.getElementById('customerName').value = order.customer || '';
+    document.getElementById('customerPhone').value = order.phone || '';
+    document.getElementById('customerAddress').value = order.address || '';
+    document.getElementById('pickupTime').value = order.pickupTime || '';
+    document.getElementById('discountInput').value = order.discount || '';
+
+    toggleOrderFields();
+    renderCart();
+    renderOrderTabs();
+}
+
+function addNewOrderTab() {
+    saveCurrentOrderState();
+    parkedOrders.push({
+        cart: [],
+        type: 'SHIP MANG VỀ',
+        customer: '',
+        phone: '',
+        address: '',
+        pickupTime: '',
+        discount: ''
+    });
+    loadOrderState(parkedOrders.length - 1);
+}
+
+function closeOrderTab(index, event) {
+    if (event) event.stopPropagation();
+
+    if (parkedOrders.length === 1) {
+        if (event) {
+            if (confirm(`Bạn có chắc muốn xóa Đơn 1?`)) {
+                clearCart();
+            }
+        } else {
+            clearCart();
+        }
+        return;
+    }
+
+    if (!event || confirm(`Bạn có chắc muốn xóa Đơn ${index + 1}?`)) {
+        parkedOrders.splice(index, 1);
+        if (activeOrderIndex >= index) {
+            activeOrderIndex = Math.max(0, activeOrderIndex - 1);
+        }
+        loadOrderState(activeOrderIndex);
+    }
+}
+
+function renderOrderTabs() {
+    const container = document.getElementById('orderTabsContainer');
+    if (!container) return;
+
+    let html = '';
+    parkedOrders.forEach((order, idx) => {
+        const isActive = idx === activeOrderIndex ? 'active' : '';
+        html += `
+            <div class="order-tab ${isActive}" onclick="switchOrderTab(${idx})">
+                Đơn ${idx + 1}
+                <span class="order-tab-close" onclick="closeOrderTab(${idx}, event)">×</span>
+            </div>
+        `;
+    });
+
+    html += `<button class="btn-add-order" onclick="addNewOrderTab()">+ Thêm đơn</button>`;
+    container.innerHTML = html;
+
+    const headerTitle = document.getElementById('orderHeaderTitle');
+    if (headerTitle) {
+        headerTitle.innerText = `Thông Tin Đơn Hàng (Đơn ${activeOrderIndex + 1})`;
+    }
+}
+
+function switchOrderTab(index) {
+    if (index === activeOrderIndex) return;
+    saveCurrentOrderState();
+    loadOrderState(index);
+}
+
+document.addEventListener('click', function (e) {
+    if (!e.target.classList.contains('menu-dots-btn') &&
+        !e.target.classList.contains('action-dots-btn') &&
         !e.target.classList.contains('stock-dots-btn')) {
         document.querySelectorAll('.menu-dropdown, .action-dropdown, .stock-dropdown').forEach(el => el.classList.remove('show'));
     }
@@ -109,31 +327,23 @@ document.addEventListener('click', function(e) {
 function removeVietnameseTones(str) {
     if (!str) return '';
     return str.normalize('NFD')
-              .replace(/[\u0300-\u036f]/g, '')
-              .replace(/đ/g, 'd').replace(/Đ/g, 'D');
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd').replace(/Đ/g, 'D');
 }
 
 // =========================================================================
 // 🖨️ BỘ VẼ BILL BITMAP CHỮ TO & RÕ NÉT (384 DOTS - K57)
 // =========================================================================
 // =========================================================================
-// 🖨️ BỘ VẼ BILL BITMAP CHỮ TO RÕ NÉT, CÂN BẰNG ĐOẠN & KHÔNG BỊ ĐÈ DÒNG
-// =========================================================================
-// =========================================================================
-// 🖨️ BỘ VẼ BILL BITMAP SẮC NÉT, BỔ SUNG FB & GIÃN DÒNG THOÁNG ĐẸP (384 DOTS)
-// =========================================================================
-// =========================================================================
-// 🖨️ BỘ VẼ BILL BITMAP CHỮ TO RÕ NÉT, BỔ SUNG FB & GIÃN DÒNG CHUẨN (384 DOTS)
-// =========================================================================
 async function printOrderAsBitmap(orderData) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const width = 384; // 384 điểm ảnh / dòng của máy K57 (48mm)
-    
+
     const itemsCount = (orderData.items || []).length;
     // Tăng chiều cao canvas tương ứng với cỡ chữ lớn hơn
     const height = 560 + (itemsCount * 85) + (orderData.discount_percent > 0 ? 100 : 0);
-    
+
     canvas.width = width;
     canvas.height = height;
 
@@ -188,7 +398,7 @@ async function printOrderAsBitmap(orderData) {
         // Tên món (Tăng lên 25px - Chữ to, nét đậm)
         ctx.font = 'bold 25px Arial';
         ctx.textAlign = 'left';
-        ctx.fillText(item.name, 5, y); 
+        ctx.fillText(item.name, 5, y);
         y += 35; // Giãn dòng an toàn, tuyệt đối không bị đè chữ
 
         // Số lượng x Giá tiền (Tăng lên 20px)
@@ -255,9 +465,9 @@ async function printOrderAsBitmap(orderData) {
                 const r = imgData.data[idx];
                 const g = imgData.data[idx + 1];
                 const b = imgData.data[idx + 2];
-                
+
                 const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-                
+
                 // Lọc màu đen đậm giúp chữ in sắc nét
                 if (luminance < 200) {
                     byteVal |= (0x80 >> bit);
@@ -297,13 +507,13 @@ async function sendRawBluetoothBytes(dataArray) {
 
 // --- 1. QUẢN LÝ THỰC ĐƠN (SUPABASE) ---
 async function loadMenuFromSupabase() {
-    const { data, error } = await db.from('menu').select('*').order('id', { ascending: true });
+    const { data, error } = await db.from('menu').select('*').eq('user_id', currentUser.id).order('id', { ascending: true });
     if (error) {
         console.error('Lỗi tải menu:', error);
         menu = defaultMenu;
     } else if (data.length === 0) {
-        await db.from('menu').insert(defaultMenu);
-        const { data: newData } = await db.from('menu').select('*').order('id', { ascending: true });
+        await db.from('menu').insert(defaultMenu.map(item => ({ ...item, user_id: currentUser.id })));
+        const { data: newData } = await db.from('menu').select('*').eq('user_id', currentUser.id).order('id', { ascending: true });
         menu = newData || defaultMenu;
     } else {
         menu = data;
@@ -329,11 +539,11 @@ async function saveMenuItem() {
     }
 
     if (editId) {
-        const { error } = await db.from('menu').update({ category, name, price }).eq('id', editId);
+        const { error } = await db.from('menu').update({ category, name, price }).eq('id', editId).eq('user_id', currentUser.id);
         if (error) alert('Lỗi sửa món: ' + error.message);
         else alert('Đã cập nhật món thành công!');
     } else {
-        const { error } = await db.from('menu').insert([{ category, name, price }]);
+        const { error } = await db.from('menu').insert([{ category, name, price, user_id: currentUser.id }]);
         if (error) alert('Lỗi thêm món: ' + error.message);
         else alert('Đã thêm món mới thành công!');
     }
@@ -355,7 +565,7 @@ function startEditMenu(id, category, name, price, event) {
 async function deleteMenuItem(id, name, event) {
     event.stopPropagation();
     if (confirm(`Bạn có chắc muốn xóa món "${name}" khỏi thực đơn?`)) {
-        const { error } = await db.from('menu').delete().eq('id', id);
+        const { error } = await db.from('menu').delete().eq('id', id).eq('user_id', currentUser.id);
         if (error) alert('Lỗi xóa món: ' + error.message);
         else loadMenuFromSupabase();
     }
@@ -504,7 +714,7 @@ function renderCart() {
 
 // --- 3. QUẢN LÝ KHO NGUYÊN LIỆU ---
 async function loadStockFromSupabase() {
-    const { data, error } = await db.from('stock').select('*').order('date', { ascending: false });
+    const { data, error } = await db.from('stock').select('*').eq('user_id', currentUser.id).order('date', { ascending: false });
     if (error) console.error('Lỗi tải kho:', error);
     else stockList = data || [];
     renderStock();
@@ -536,7 +746,7 @@ async function addStockItem() {
     }
 
     if (editId) {
-        const { error } = await db.from('stock').update({ date, name, unit, qty, price }).eq('id', editId);
+        const { error } = await db.from('stock').update({ date, name, unit, qty, price }).eq('id', editId).eq('user_id', currentUser.id);
         if (error) {
             alert('Lỗi cập nhật nguyên liệu: ' + error.message);
         } else {
@@ -545,7 +755,7 @@ async function addStockItem() {
             loadStockFromSupabase();
         }
     } else {
-        const newItem = { id: Date.now(), date, name, unit, qty, price };
+        const newItem = { id: Date.now(), date, name, unit, qty, price, user_id: currentUser.id };
         const { error } = await db.from('stock').insert([newItem]);
         if (error) {
             alert('Lỗi lưu Supabase: ' + error.message);
@@ -617,7 +827,7 @@ async function deleteStockItem(id, event) {
     const itemName = item ? item.name : 'nguyên liệu này';
 
     if (confirm(`Bạn có chắc muốn xóa "${itemName}" khỏi kho nguyên liệu?`)) {
-        const { error } = await db.from('stock').delete().eq('id', id);
+        const { error } = await db.from('stock').delete().eq('id', id).eq('user_id', currentUser.id);
         if (!error) {
             stockList = stockList.filter(s => s.id !== id);
             renderStock();
@@ -630,7 +840,7 @@ async function deleteStockItem(id, event) {
 function toggleStockDayBlock(dateKey) {
     const contentBox = document.getElementById(`stockBlock-${dateKey}`);
     const iconElem = document.getElementById(`stockToggleIcon-${dateKey}`);
-    
+
     if (contentBox) {
         if (contentBox.style.display === 'none') {
             contentBox.style.display = 'block';
@@ -752,7 +962,7 @@ function renderStock() {
 
         dayHTML += `</tbody></table></div>`;
         stockContainer.innerHTML += dayHTML;
-        
+
         setTimeout(() => {
             const dayElem = document.getElementById(`dayTotal-${d}`);
             if (dayElem) dayElem.innerText = "Tổng: " + dayTotal.toLocaleString('vi-VN') + " đ";
@@ -764,7 +974,7 @@ function renderStock() {
 
 // --- 4. BÁO CÁO DOANH THU & BIỂU ĐỒ ---
 async function loadSalesHistoryFromSupabase() {
-    const { data, error } = await db.from('sales_history').select('*').order('created_at', { ascending: false });
+    const { data, error } = await db.from('sales_history').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
     if (error) console.error('Lỗi tải báo cáo:', error);
     else salesHistory = data || [];
     renderHistory();
@@ -795,7 +1005,7 @@ function toggleActionDropdown(id, event) {
 function toggleDayOrders(dateKey) {
     const contentBox = document.getElementById(`dayOrdersBlock-${dateKey}`);
     const iconElem = document.getElementById(`toggleIcon-${dateKey}`);
-    
+
     if (contentBox) {
         if (contentBox.style.display === 'none') {
             contentBox.style.display = 'block';
@@ -909,7 +1119,7 @@ function editOrder(orderId) {
 
     if (confirm(`Bạn có muốn nạp đơn hàng của khách "${order.customer}" vào giỏ để chỉnh sửa không?`)) {
         editingOrderId = order.id;
-        
+
         cart = JSON.parse(JSON.stringify(order.items || []));
         document.getElementById('orderType').value = order.type || 'SHIP MANG VỀ';
         document.getElementById('customerName').value = order.customer || '';
@@ -986,7 +1196,7 @@ function renderTopItemsChart(filteredOrders) {
                 legend: { display: false },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             return ` Đã bán: ${context.parsed.y} phần`;
                         }
                     }
@@ -1052,7 +1262,7 @@ function renderHistory() {
         if (order.created_at) {
             dateKey = order.created_at.split('T')[0];
         }
-        
+
         if (!historyByDate[dateKey]) {
             historyByDate[dateKey] = [];
         }
@@ -1063,7 +1273,7 @@ function renderHistory() {
 
     sortedDates.forEach((d, index) => {
         const ordersInDay = historyByDate[d];
-        
+
         ordersInDay.sort((a, b) => {
             if (b.time && a.time) {
                 return b.time.localeCompare(a.time);
@@ -1171,6 +1381,7 @@ async function printReceipt() {
     const finalTotal = subtotalTotal - discountAmount;
 
     const orderRecord = {
+        user_id: currentUser.id,
         time: timeStr,
         type: orderType,
         customer: customerName,
@@ -1185,7 +1396,7 @@ async function printReceipt() {
     };
 
     if (editingOrderId) {
-        const { error } = await db.from('sales_history').update(orderRecord).eq('id', editingOrderId);
+        const { error } = await db.from('sales_history').update(orderRecord).eq('id', editingOrderId).eq('user_id', currentUser.id);
         if (error) {
             console.error('Lỗi cập nhật đơn hàng:', error);
             alert('Lỗi khi cập nhật đơn hàng: ' + error.message);
@@ -1216,7 +1427,7 @@ async function printReceipt() {
     } else if (orderType === 'KHÁCH TỚI LẤY' && pickupTime) {
         infoHTML += `<b>Giờ tới lấy:</b> ${pickupTime}<br>`;
     }
-    
+
     document.getElementById('printCustomerInfo').innerHTML = infoHTML;
 
     const printBody = document.getElementById('printBody');
@@ -1252,14 +1463,14 @@ async function printReceipt() {
     // In hóa đơn dạng Bitmap Tiếng Việt chữ to & nét qua Bluetooth
     await printOrderAsBitmap(orderRecord);
 
-    clearCart();
+    closeOrderTab(activeOrderIndex);
     renderHistory();
     switchTab('menu');
 }
 
 async function deleteOrder(orderId) {
     if (confirm('Bạn có chắc muốn xóa hóa đơn này khỏi Supabase?')) {
-        const { error } = await db.from('sales_history').delete().eq('id', orderId);
+        const { error } = await db.from('sales_history').delete().eq('id', orderId).eq('user_id', currentUser.id);
         if (!error) {
             salesHistory = salesHistory.filter(o => o.id !== orderId);
             renderHistory();
@@ -1302,7 +1513,7 @@ async function connectBluetooth() {
 
         const server = await bluetoothDevice.gatt.connect();
         const services = await server.getPrimaryServices();
-        
+
         for (let service of services) {
             const characteristics = await service.getCharacteristics();
             for (let c of characteristics) {
@@ -1364,17 +1575,12 @@ function updateNote(index, value) {
 }
 
 function clearCart() {
-    cart = [];
+    parkedOrders[activeOrderIndex] = {
+        cart: [], type: 'SHIP MANG VỀ', customer: '', phone: '', address: '', pickupTime: '', discount: ''
+    };
+    loadOrderState(activeOrderIndex);
     editingOrderId = null;
-    document.getElementById('customerName').value = '';
-    document.getElementById('customerPhone').value = '';
-    document.getElementById('customerAddress').value = '';
-    document.getElementById('pickupTime').value = '';
-    document.getElementById('discountInput').value = '';
-    renderCart();
 }
-
 // KHỞI TẠO DỮ LIỆU TỪ SUPABASE
-loadMenuFromSupabase();
-loadStockFromSupabase();
-loadSalesHistoryFromSupabase();
+initAuth();
+cart = parkedOrders[0].cart;
