@@ -1,0 +1,25 @@
+name: Auto Deploy to Windows Server
+
+on:
+  push:
+    branches:
+      - main   # Nhánh bạn muốn kích hoạt auto deploy
+
+jobs:
+  deploy:
+    runs-on: self-hosted   # Chỉ định chạy trực tiếp trên Windows Server
+
+    steps:
+      - name: Deploy Code
+        run: |
+          cd D:\code\homechicken
+          git pull origin main
+          
+          # Thêm các lệnh build / restart service tùy thuộc vào loại dự án:
+          # Ví dụ với Node.js:
+          # npm install
+          # pm2 restart all
+          
+          # Ví dụ với IIS / .NET:
+          # dotnet publish -c Release -o C:\inetpub\wwwroot\myapp
+          # iisreset /noforce
