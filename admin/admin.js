@@ -1,10 +1,9 @@
 // =========================================================================
-// ⚙️ CẤU HÌNH SUPABASE
+// ⚙️ CẤU HÌNH API
 // =========================================================================
-const SUPABASE_URL = 'https://pxixtrwfvyzlvfnkszrm.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_mbWkuvRJYm0U1u5Ngfkulw_W_wVVS-o'; // Dán key của bạn vào đây
+const API_BASE = 'http://localhost:3000/api';
 
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const db = createApiClient(API_BASE);
 
 let currentUser = null;
 let allUsers = [];

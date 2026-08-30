@@ -6,8 +6,8 @@
     <title id="pageTitle">Cửa Hàng - Đang Tải...</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="store.css">
-    <!-- Supabase JS SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Custom API Client -->
+    <script src="api-client.js"></script>
 </head>
 <body>
 
@@ -99,10 +99,9 @@
     </div>
 
     <script>
-        // Supabase config (reuse from app.js)
-        const SUPABASE_URL = 'https://pxixtrwfvyzlvfnkszrm.supabase.co';
-        const SUPABASE_ANON_KEY = 'sb_publishable_mbWkuvRJYm0U1u5Ngfkulw_W_wVVS-o';
-        const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // API config
+        const API_BASE = 'http://localhost:3000/api';
+        const db = createApiClient(API_BASE);
 
         let storeUser = null;
         let landingInfo = null;
