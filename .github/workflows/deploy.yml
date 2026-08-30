@@ -3,7 +3,7 @@ name: Auto Deploy to Windows Server
 on:
   push:
     branches:
-      - main   # Nhánh bạn muốn kích hoạt auto deploy
+      - master   # Nhánh bạn muốn kích hoạt auto deploy
 
 jobs:
   deploy:
@@ -13,7 +13,7 @@ jobs:
       - name: Deploy Code
         run: |
           cd D:\code\homechicken
-          git pull origin main
+          git pull origin master
           
           # Thêm các lệnh build / restart service tùy thuộc vào loại dự án:
           # Ví dụ với Node.js:
