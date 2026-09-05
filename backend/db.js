@@ -1,4 +1,7 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
+
+// Tự động chuyển đổi PostgreSQL NUMERIC (OID 1700) sang Number thay vì String
+types.setTypeParser(1700, (val) => val === null ? null : parseFloat(val));
 const path = require('path');
 const fs = require('fs');
 

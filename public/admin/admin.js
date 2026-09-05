@@ -7,6 +7,12 @@ const API_BASE = (window.location.hostname === 'localhost' || window.location.ho
 
 const db = createApiClient(API_BASE);
 
+// Hàm định dạng tiền tệ VNĐ chuẩn (xử lý an toàn cả số và chuỗi từ database)
+function formatMoney(amount) {
+    const num = Number(amount) || 0;
+    return Math.round(num).toLocaleString('vi-VN');
+}
+
 let currentUser = null;
 let allUsers = [];
 let currentStoreForMenu = null;
@@ -361,7 +367,7 @@ async function loadStoreMenu() {
     }
     
     if (data && data.length > 0) {
-        currentStoreMenu = data;
+        currentStoreMenu = data.map(item => ({ ...item, price: Number(item.price) || 0 }));
         renderMenuTable();
     } else {
         // Tạo menu mặc định nếu cửa hàng chưa có món nào (vừa tạo xong)
@@ -383,7 +389,7 @@ async function loadStoreMenu() {
         if (fetchErr) {
             currentStoreMenu = [];
         } else {
-            currentStoreMenu = newData;
+            currentStoreMenu = (newData || []).map(item => ({ ...item, price: Number(item.price) || 0 }));
         }
         renderMenuTable();
     }
@@ -405,7 +411,7 @@ function renderMenuTable() {
         tr.innerHTML = `
             <td>${item.category}</td>
             <td><strong>${item.name}</strong></td>
-            <td>${item.price.toLocaleString('vi-VN')} đ</td>
+            <td>${formatMoney(item.price)} đ</td>
             <td>
                 <div class="dropdown">
                     <button class="btn btn-secondary btn-sm dropbtn" onclick="toggleDropdown('drop-menu-${item.id}', event)">
@@ -444,7 +450,7 @@ function editMenu(id) {
     document.getElementById('editMenuId').value = item.id;
     document.getElementById('modalMenuCategory').value = item.category;
     document.getElementById('modalMenuName').value = item.name;
-    document.getElementById('modalMenuPrice').value = item.price;
+    document.getElementById('modalMenuPrice').value = Math.round(Number(item.price) || 0);
     
     document.getElementById('menuModal').classList.remove('hidden');
 }

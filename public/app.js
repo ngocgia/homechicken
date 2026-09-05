@@ -7,6 +7,12 @@ const API_BASE = (window.location.hostname === 'localhost' || window.location.ho
 
 const db = createApiClient(API_BASE);
 
+// Hàm định dạng tiền tệ VNĐ chuẩn (xử lý an toàn cả số và chuỗi từ database)
+function formatMoney(amount) {
+    const num = Number(amount) || 0;
+    return Math.round(num).toLocaleString('vi-VN');
+}
+
 let currentUser = null;
 let isLoginMode = true;
 
@@ -443,8 +449,10 @@ async function printOrderAsBitmap(orderData) {
 
         // Số lượng x Giá tiền (Tăng lên 20px)
         ctx.font = 'bold 20px Arial';
-        const detailStr = `${item.qty} x ${item.price.toLocaleString('vi-VN')} đ`;
-        const totalStr = `${(item.qty * item.price).toLocaleString('vi-VN')} đ`;
+        const itemPrice = Number(item.price) || 0;
+        const itemQty = Number(item.qty) || 0;
+        const detailStr = `${itemQty} x ${formatMoney(itemPrice)} đ`;
+        const totalStr = `${formatMoney(itemQty * itemPrice)} đ`;
 
         ctx.fillText(detailStr, 12, y);
         ctx.textAlign = 'right';
@@ -465,18 +473,18 @@ async function printOrderAsBitmap(orderData) {
     if (orderData.discount_percent > 0) {
         ctx.font = 'bold 20px Arial';
         ctx.textAlign = 'left'; ctx.fillText('Tạm tính:', 5, y);
-        ctx.textAlign = 'right'; ctx.fillText(`${(orderData.subtotal || 0).toLocaleString('vi-VN')} đ`, width - 5, y);
+        ctx.textAlign = 'right'; ctx.fillText(`${formatMoney(orderData.subtotal || 0)} đ`, width - 5, y);
         y += 32;
 
         ctx.textAlign = 'left'; ctx.fillText(`Giảm giá (${orderData.discount_percent}%):`, 5, y);
-        ctx.textAlign = 'right'; ctx.fillText(`-${(orderData.discount_amount || 0).toLocaleString('vi-VN')} đ`, width - 5, y);
+        ctx.textAlign = 'right'; ctx.fillText(`-${formatMoney(orderData.discount_amount || 0)} đ`, width - 5, y);
         y += 32;
         drawDashLine(y); y += 16;
     }
 
     ctx.font = 'bold 30px Arial';
     ctx.textAlign = 'left'; ctx.fillText('TỔNG CỘNG:', 5, y);
-    ctx.textAlign = 'right'; ctx.fillText(`${(orderData.total || 0).toLocaleString('vi-VN')} đ`, width - 5, y);
+    ctx.textAlign = 'right'; ctx.fillText(`${formatMoney(orderData.total || 0)} đ`, width - 5, y);
     y += 46;
 
     drawDashLine(y); y += 18;
@@ -554,9 +562,9 @@ async function loadMenuFromSupabase() {
     } else if (data.length === 0) {
         await db.from('menu').insert(defaultMenu.map(item => ({ ...item, user_id: currentUser.id })));
         const { data: newData } = await db.from('menu').select('*').eq('user_id', currentUser.id).order('id', { ascending: true });
-        menu = newData || defaultMenu;
+        menu = (newData || defaultMenu).map(item => ({ ...item, price: Number(item.price) || 0 }));
     } else {
-        menu = data;
+        menu = data.map(item => ({ ...item, price: Number(item.price) || 0 }));
     }
     renderMenu();
 }
@@ -599,7 +607,7 @@ function startEditMenu(id, category, name, price, event) {
     document.getElementById('editMenuId').value = id;
     document.getElementById('menuCategoryInput').value = category;
     document.getElementById('menuNameInput').value = name;
-    document.getElementById('menuPriceInput').value = price;
+    document.getElementById('menuPriceInput').value = Math.round(Number(price) || 0);
 }
 
 async function deleteMenuItem(id, name, event) {
@@ -651,12 +659,12 @@ function renderMenu(itemsToRender = menu) {
                     <div class="menu-dots-btn" onclick="toggleMenuDropdown(${item.id}, event)">⋮</div>
                     
                     <div class="menu-dropdown" id="dropdown-${item.id}">
-                        <button class="menu-dropdown-item edit" onclick="startEditMenu(${item.id}, '${item.category}', '${item.name}', ${item.price}, event)">✏️ Sửa món</button>
+                        <button class="menu-dropdown-item edit" onclick="startEditMenu(${item.id}, '${item.category}', '${item.name}', ${Number(item.price) || 0}, event)">✏️ Sửa món</button>
                         <button class="menu-dropdown-item delete" onclick="deleteMenuItem(${item.id}, '${item.name}', event)">🗑️ Xóa món</button>
                     </div>
 
                     <div class="name">${item.name}</div>
-                    <div class="price">${item.price.toLocaleString('vi-VN')} đ</div>
+                    <div class="price">${formatMoney(item.price)} đ</div>
                 </div>
             `;
         });
@@ -695,9 +703,11 @@ function renderCart() {
     let totalQty = 0;
 
     cart.forEach((item, index) => {
-        const subtotal = item.price * item.qty;
+        const itemPrice = Number(item.price) || 0;
+        const itemQty = Number(item.qty) || 0;
+        const subtotal = itemPrice * itemQty;
         subtotalTotal += subtotal;
-        totalQty += item.qty;
+        totalQty += itemQty;
 
         cartBody.innerHTML += `
             <tr>
@@ -710,7 +720,7 @@ function renderCart() {
                     </div>
                 </td>
                 <td class="col-price" ondblclick="enablePriceEdit(${index}, this)" title="Bấm 2 lần để sửa giá">
-                    ${subtotal.toLocaleString('vi-VN')}
+                    ${formatMoney(subtotal)}
                 </td>
                 <td class="col-note">
                     <input type="text" class="note-input" placeholder="Ghi chú..." value="${item.note || ''}" onchange="updateNote(${index}, this.value)">
@@ -732,17 +742,17 @@ function renderCart() {
     if (discountPercent > 0) {
         uiSubTotalRow.style.display = 'block';
         uiDiscountRow.style.display = 'block';
-        document.getElementById('subTotal').innerText = subtotalTotal.toLocaleString('vi-VN');
+        document.getElementById('subTotal').innerText = formatMoney(subtotalTotal);
         document.getElementById('discountPercent').innerText = discountPercent;
-        document.getElementById('discountAmount').innerText = discountAmount.toLocaleString('vi-VN');
+        document.getElementById('discountAmount').innerText = formatMoney(discountAmount);
     } else {
         uiSubTotalRow.style.display = 'none';
         uiDiscountRow.style.display = 'none';
     }
 
-    document.getElementById('grandTotal').innerText = finalTotal.toLocaleString('vi-VN');
+    document.getElementById('grandTotal').innerText = formatMoney(finalTotal);
     document.getElementById('stickyQty').innerText = totalQty;
-    document.getElementById('stickyTotal').innerText = finalTotal.toLocaleString('vi-VN');
+    document.getElementById('stickyTotal').innerText = formatMoney(finalTotal);
 
     const activeTab = document.querySelector('.tab-content.active').id;
     if (activeTab === 'tab-menu' && cart.length > 0) {
@@ -756,7 +766,11 @@ function renderCart() {
 async function loadStockFromSupabase() {
     const { data, error } = await db.from('stock').select('*').eq('user_id', currentUser.id).order('date', { ascending: false });
     if (error) console.error('Lỗi tải kho:', error);
-    else stockList = data || [];
+    else stockList = (data || []).map(item => ({
+        ...item,
+        qty: Number(item.qty) || 0,
+        price: Number(item.price) || 0
+    }));
     renderStock();
 }
 
@@ -840,17 +854,19 @@ function viewStockDetail(id, event) {
     const item = stockList.find(s => s.id === id);
     if (!item) return;
 
-    const itemTotal = item.qty * item.price;
+    const itemPrice = Number(item.price) || 0;
+    const itemQty = Number(item.qty) || 0;
+    const itemTotal = itemQty * itemPrice;
     const dateParts = (item.date || todayStr).split('-');
     const displayDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
 
     let infoHTML = `
         <b>Tên nguyên liệu:</b> ${item.name}<br>
         <b>Ngày nhập:</b> ${displayDate}<br>
-        <b>Số lượng:</b> ${item.qty} ${item.unit}<br>
-        <b>Đơn giá nhập:</b> ${item.price.toLocaleString('vi-VN')} đ / ${item.unit}<br>
+        <b>Số lượng:</b> ${itemQty} ${item.unit}<br>
+        <b>Đơn giá nhập:</b> ${formatMoney(itemPrice)} đ / ${item.unit}<br>
         <hr style="margin: 8px 0; border: 0; border-top: 1px dashed #ccc;">
-        <b style="color: #c0392b; font-size: 14px;">TỔNG GIÁ TRỊ NHẬP: ${itemTotal.toLocaleString('vi-VN')} đ</b>
+        <b style="color: #c0392b; font-size: 14px;">TỔNG GIÁ TRỊ NHẬP: ${formatMoney(itemTotal)} đ</b>
     `;
 
     document.getElementById('modalStockInfo').innerHTML = infoHTML;
@@ -973,7 +989,9 @@ function renderStock() {
         `;
 
         itemsInDate.forEach(item => {
-            const itemTotal = item.qty * item.price;
+            const itemPrice = Number(item.price) || 0;
+            const itemQty = Number(item.qty) || 0;
+            const itemTotal = itemQty * itemPrice;
             dayTotal += itemTotal;
             totalValAll += itemTotal;
 
@@ -984,9 +1002,9 @@ function renderStock() {
                         <div style="font-size: 10px; color: #7f8c8d;">ĐVT: ${item.unit}</div>
                     </td>
                     <td style="text-align: center;">
-                        <span class="stock-qty-display">${item.qty} ${item.unit}</span>
+                        <span class="stock-qty-display">${itemQty} ${item.unit}</span>
                     </td>
-                    <td style="text-align: right; font-weight: 500;">${item.price.toLocaleString('vi-VN')} đ</td>
+                    <td style="text-align: right; font-weight: 500;">${formatMoney(itemPrice)} đ</td>
                     <td style="text-align: center; position: relative;">
                         <span class="stock-dots-btn" onclick="toggleStockDropdown(${item.id}, event)">⋮</span>
                         
@@ -1005,18 +1023,29 @@ function renderStock() {
 
         setTimeout(() => {
             const dayElem = document.getElementById(`dayTotal-${d}`);
-            if (dayElem) dayElem.innerText = "Tổng: " + dayTotal.toLocaleString('vi-VN') + " đ";
+            if (dayElem) dayElem.innerText = "Tổng: " + formatMoney(dayTotal) + " đ";
         }, 10);
     });
 
-    document.getElementById('totalStockValue').innerText = totalValAll.toLocaleString('vi-VN') + " đ";
+    document.getElementById('totalStockValue').innerText = formatMoney(totalValAll) + " đ";
 }
 
 // --- 4. BÁO CÁO DOANH THU & BIỂU ĐỒ ---
 async function loadSalesHistoryFromSupabase() {
     const { data, error } = await db.from('sales_history').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
     if (error) console.error('Lỗi tải báo cáo:', error);
-    else salesHistory = data || [];
+    else salesHistory = (data || []).map(order => ({
+        ...order,
+        subtotal: Number(order.subtotal) || 0,
+        discount_percent: Number(order.discount_percent) || 0,
+        discount_amount: Number(order.discount_amount) || 0,
+        total: Number(order.total) || 0,
+        items: (Array.isArray(order.items) ? order.items : []).map(i => ({
+            ...i,
+            qty: Number(i.qty) || 0,
+            price: Number(i.price) || 0
+        }))
+    }));
     renderHistory();
 }
 
@@ -1077,13 +1106,15 @@ function viewOrderDetail(orderId) {
 
     if (order.items && Array.isArray(order.items)) {
         order.items.forEach(item => {
-            const itemSubtotal = item.price * item.qty;
+            const itemPrice = Number(item.price) || 0;
+            const itemQty = Number(item.qty) || 0;
+            const itemSubtotal = itemPrice * itemQty;
             let noteStr = item.note ? `<br><small style="color:#7f8c8d;">└ Note: ${item.note}</small>` : '';
             itemsBody.innerHTML += `
                 <tr>
                     <td>${item.name}${noteStr}</td>
-                    <td style="text-align: center;">${item.qty}</td>
-                    <td style="text-align: right;">${itemSubtotal.toLocaleString('vi-VN')} đ</td>
+                    <td style="text-align: center;">${itemQty}</td>
+                    <td style="text-align: right;">${formatMoney(itemSubtotal)} đ</td>
                 </tr>
             `;
         });
@@ -1091,10 +1122,10 @@ function viewOrderDetail(orderId) {
 
     let totalHTML = '';
     if (order.discount_percent > 0) {
-        totalHTML += `<div style="font-size: 11px; color:#7f8c8d;">Tạm tính: ${(order.subtotal || 0).toLocaleString('vi-VN')} đ</div>`;
-        totalHTML += `<div style="font-size: 11px; color:#e67e22;">Giảm giá (${order.discount_percent}%): -${(order.discount_amount || 0).toLocaleString('vi-VN')} đ</div>`;
+        totalHTML += `<div style="font-size: 11px; color:#7f8c8d;">Tạm tính: ${formatMoney(order.subtotal || 0)} đ</div>`;
+        totalHTML += `<div style="font-size: 11px; color:#e67e22;">Giảm giá (${order.discount_percent}%): -${formatMoney(order.discount_amount || 0)} đ</div>`;
     }
-    totalHTML += `TỔNG CỘNG: ${(order.total || 0).toLocaleString('vi-VN')} đ`;
+    totalHTML += `TỔNG CỘNG: ${formatMoney(order.total || 0)} đ`;
 
     document.getElementById('modalOrderTotal').innerHTML = totalHTML;
     document.getElementById('orderDetailModal').style.display = 'block';
@@ -1123,12 +1154,14 @@ async function rePrintOrder(orderId) {
     printBody.innerHTML = '';
 
     (order.items || []).forEach(item => {
-        const subtotal = item.price * item.qty;
+        const itemPrice = Number(item.price) || 0;
+        const itemQty = Number(item.qty) || 0;
+        const subtotal = itemPrice * itemQty;
         let rowHTML = `
             <tr>
                 <td>${item.name}</td>
-                <td class="num">${item.qty}</td>
-                <td class="num">${subtotal.toLocaleString('vi-VN')}</td>
+                <td class="num">${itemQty}</td>
+                <td class="num">${formatMoney(subtotal)}</td>
             </tr>
         `;
         if (item.note && item.note.trim() !== '') {
@@ -1139,15 +1172,15 @@ async function rePrintOrder(orderId) {
 
     const printDiscountBlock = document.getElementById('printDiscountBlock');
     if (order.discount_percent > 0) {
-        document.getElementById('printSubTotal').innerText = (order.subtotal || order.total).toLocaleString('vi-VN');
+        document.getElementById('printSubTotal').innerText = formatMoney(order.subtotal || order.total);
         document.getElementById('printDiscountPercent').innerText = order.discount_percent;
-        document.getElementById('printDiscountVal').innerText = (order.discount_amount || 0).toLocaleString('vi-VN');
+        document.getElementById('printDiscountVal').innerText = formatMoney(order.discount_amount || 0);
         printDiscountBlock.style.display = 'block';
     } else {
         printDiscountBlock.style.display = 'none';
     }
 
-    document.getElementById('printTotal').innerText = (order.total || 0).toLocaleString('vi-VN');
+    document.getElementById('printTotal').innerText = formatMoney(order.total || 0);
 
     // In hóa đơn dạng Bitmap Tiếng Việt qua Bluetooth
     await printOrderAsBitmap(order);
@@ -1297,7 +1330,7 @@ function renderHistory() {
     const historyByDate = {};
 
     filteredOrders.forEach(order => {
-        grandTotalAccumulated += order.total;
+        grandTotalAccumulated += Number(order.total) || 0;
         let dateKey = todayStr;
         if (order.created_at) {
             dateKey = order.created_at.split('T')[0];
@@ -1353,7 +1386,7 @@ function renderHistory() {
         `;
 
         ordersInDay.forEach(order => {
-            dayTotalSales += order.total;
+            dayTotalSales += Number(order.total) || 0;
             let subDetail = order.type || '';
             if (order.pickup_time) subDetail += ` (${order.pickup_time})`;
 
@@ -1372,7 +1405,7 @@ function renderHistory() {
                             ${itemsSummary}
                         </div>
                     </td>
-                    <td style="text-align: right; font-weight: bold; color: #c0392b;">${order.total.toLocaleString('vi-VN')} đ</td>
+                    <td style="text-align: right; font-weight: bold; color: #c0392b;">${formatMoney(order.total)} đ</td>
                     <td style="text-align: center; position: relative;">
                         <span class="action-dots-btn" onclick="toggleActionDropdown(${order.id}, event)">⋮</span>
                         
@@ -1483,12 +1516,14 @@ async function printReceipt() {
     printBody.innerHTML = '';
 
     cart.forEach(item => {
-        const subtotal = item.price * item.qty;
+        const itemPrice = Number(item.price) || 0;
+        const itemQty = Number(item.qty) || 0;
+        const subtotal = itemPrice * itemQty;
         let rowHTML = `
             <tr>
                 <td>${item.name}</td>
-                <td class="num">${item.qty}</td>
-                <td class="num">${subtotal.toLocaleString('vi-VN')}</td>
+                <td class="num">${itemQty}</td>
+                <td class="num">${formatMoney(subtotal)}</td>
             </tr>
         `;
         if (item.note && item.note.trim() !== '') {
@@ -1499,15 +1534,15 @@ async function printReceipt() {
 
     const printDiscountBlock = document.getElementById('printDiscountBlock');
     if (discountPercent > 0) {
-        document.getElementById('printSubTotal').innerText = subtotalTotal.toLocaleString('vi-VN');
+        document.getElementById('printSubTotal').innerText = formatMoney(subtotalTotal);
         document.getElementById('printDiscountPercent').innerText = discountPercent;
-        document.getElementById('printDiscountVal').innerText = discountAmount.toLocaleString('vi-VN');
+        document.getElementById('printDiscountVal').innerText = formatMoney(discountAmount);
         printDiscountBlock.style.display = 'block';
     } else {
         printDiscountBlock.style.display = 'none';
     }
 
-    document.getElementById('printTotal').innerText = finalTotal.toLocaleString('vi-VN');
+    document.getElementById('printTotal').innerText = formatMoney(finalTotal);
 
     // In hóa đơn dạng Bitmap Tiếng Việt chữ to & nét qua Bluetooth
     await printOrderAsBitmap(orderRecord);
@@ -1643,12 +1678,14 @@ function selectCategory(category) {
 
 function addToCart(index) {
     const item = menu[index];
+    const itemPrice = Number(item.price) || 0;
     const existing = cart.find(c => c.name === item.name);
 
     if (existing) {
         existing.qty += 1;
+        existing.price = itemPrice;
     } else {
-        cart.push({ ...item, qty: 1, note: '' });
+        cart.push({ ...item, price: itemPrice, qty: 1, note: '' });
     }
     renderCart();
 }

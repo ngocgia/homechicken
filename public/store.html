@@ -105,6 +105,11 @@
             : (window.location.protocol.startsWith('http') ? `${window.location.origin}/api` : 'https://giavdn.pro.vn/api');
         const db = createApiClient(API_BASE);
 
+        function formatMoney(amount) {
+            const num = Number(amount) || 0;
+            return Math.round(num).toLocaleString('vi-VN');
+        }
+
         let storeUser = null;
         let landingInfo = null;
         let menuData = [];
@@ -154,7 +159,7 @@
                     .order('name', { ascending: true });
 
                 if (menuItems) {
-                    menuData = menuItems;
+                    menuData = menuItems.map(item => ({ ...item, price: Number(item.price) || 0 }));
                     // Lấy danh sách danh mục duy nhất
                     const catSet = new Set(menuData.map(item => item.category));
                     categories = Array.from(catSet);
@@ -270,7 +275,7 @@
                         <h4>${item.name}</h4>
                         <p>${category}</p>
                     </div>
-                    <div class="item-price">${item.price.toLocaleString('vi-VN')} đ</div>
+                    <div class="item-price">${formatMoney(item.price)} đ</div>
                 `;
                 grid.appendChild(el);
             });
