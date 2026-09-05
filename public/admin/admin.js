@@ -1,7 +1,9 @@
 // =========================================================================
 // ⚙️ CẤU HÌNH API
-// =========================================================================
-const API_BASE = 'http://localhost:3000/api';
+// Tự động nhận diện host: nếu chạy cùng domain hoặc localhost thì dùng relative '/api' hoặc origin, fallback production
+const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? (window.location.port === '3000' || window.location.port === '' ? '/api' : 'http://localhost:3000/api')
+    : (window.location.protocol.startsWith('http') ? `${window.location.origin}/api` : 'https://giavdn.pro.vn/api');
 
 const db = createApiClient(API_BASE);
 
@@ -732,7 +734,8 @@ async function openLandingManager(userId, storeName) {
     document.getElementById('tab-landing').classList.remove('hidden');
     document.getElementById('tab-landing').style.display = 'block';
 
-    const link = window.location.origin + window.location.pathname.replace('/admin/index.html', '') + '/store.html?u=' + currentStoreUsername;
+    const basePath = window.location.pathname.replace(/\/admin(\/index\.html)?\/?$/, '');
+    const link = `${window.location.origin}${basePath}/store.html?u=${encodeURIComponent(currentStoreUsername)}`;
     document.getElementById('landingPreviewLink').innerText = link;
     document.getElementById('landingPreviewLink').href = link;
 

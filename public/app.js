@@ -1,7 +1,9 @@
 // =========================================================================
 // ⚙️ CẤU HÌNH API
-// =========================================================================
-const API_BASE = 'http://localhost:3000/api';
+// Tự động nhận diện host: nếu chạy cùng domain hoặc localhost thì dùng relative '/api' hoặc origin, fallback production
+const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? (window.location.port === '3000' || window.location.port === '' ? '/api' : 'http://localhost:3000/api')
+    : (window.location.protocol.startsWith('http') ? `${window.location.origin}/api` : 'https://giavdn.pro.vn/api');
 
 const db = createApiClient(API_BASE);
 
@@ -22,7 +24,7 @@ function showMainApp() {
     document.getElementById('auth-container').style.display = 'none';
     document.getElementById('main-app-container').style.display = 'block';
     document.getElementById('btnLogout').style.display = 'flex';
-    
+
     if (currentUser && currentUser.username === 'admin') {
         document.getElementById('btnAdmin').style.display = 'flex';
     } else {
@@ -316,7 +318,7 @@ function closeOrderTab(index, event) {
 function renderOrderTabs() {
     const container = document.getElementById('orderTabsContainer');
     if (!container) return;
-    
+
     let html = '';
     parkedOrders.forEach((order, idx) => {
         const isActive = idx === activeOrderIndex ? 'active' : '';
@@ -390,7 +392,7 @@ async function printOrderAsBitmap(orderData) {
     // 1. TIÊU ĐỀ HÓA ĐƠN (Tên quán to siêu nổi bật)
     ctx.font = 'bold 36px Arial';
     ctx.textAlign = 'center';
-    
+
     const storeNameStr = (currentUser && currentUser.store_name) ? currentUser.store_name : 'CỬA HÀNG';
     ctx.fillText(storeNameStr, width / 2, y); y += 46;
 
@@ -1467,7 +1469,7 @@ async function printReceipt() {
     document.getElementById('printOrderType').innerText = "[ " + orderType + " ]";
     let infoHTML = `<b>Khách:</b> ${customerName}<br>`;
     if (customerPhone) infoHTML += `<b>SĐT:</b> ${customerPhone}<br>`;
-    
+
     const typeObjPrint = storeOrderTypes.find(t => t.name === orderType);
     if (typeObjPrint && typeObjPrint.require_address && customerAddress) {
         infoHTML += `<b>Địa chỉ ship:</b> ${customerAddress}<br>`;
@@ -1530,7 +1532,7 @@ function toggleOrderFields() {
     const orderType = document.getElementById('orderType').value;
     const addressRow = document.getElementById('addressRow');
     const pickupTimeRow = document.getElementById('pickupTimeRow');
-    
+
     const typeObj = storeOrderTypes.find(t => t.name === orderType);
 
     if (typeObj) {
@@ -1597,7 +1599,7 @@ function switchTab(tabName) {
     } else {
         stickyBar.style.display = 'none';
     }
-    
+
     // Select the first category by default
     if (categories.length > 0) {
         selectCategory(categories[0]);
@@ -1606,12 +1608,12 @@ function switchTab(tabName) {
 
 async function loadOrderTypesFromSupabase() {
     const { data, error } = await db.from('order_types').select('*').eq('user_id', currentUser.id).order('id', { ascending: true });
-    
+
     if (error) {
         console.error('Error fetching order types:', error);
         return;
     }
-    
+
     if (data && data.length > 0) {
         storeOrderTypes = data;
     } else {
@@ -1619,7 +1621,7 @@ async function loadOrderTypesFromSupabase() {
         const { data: newData } = await db.from('order_types').select('*').eq('user_id', currentUser.id).order('id', { ascending: true });
         if (newData) storeOrderTypes = newData;
     }
-    
+
     const orderTypeSelect = document.getElementById('orderType');
     orderTypeSelect.innerHTML = '';
     storeOrderTypes.forEach(type => {
@@ -1628,7 +1630,7 @@ async function loadOrderTypesFromSupabase() {
         option.innerText = type.name;
         orderTypeSelect.appendChild(option);
     });
-    
+
     toggleOrderFields(); // Update UI based on the first selected type
 }
 

@@ -1,10 +1,21 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
 const db = require('./db');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Xác định thư mục public chứa giao diện (hỗ trợ cả khi chạy từ root hoặc trong thư mục backend)
+const publicDir = fs.existsSync(path.join(__dirname, 'public'))
+  ? path.join(__dirname, 'public')
+  : path.join(__dirname, '..', 'public');
+
+// Phục vụ các tài nguyên tĩnh (css, js, images, html...)
+app.use(express.static(publicDir));
+app.use('/admin', express.static(path.join(publicDir, 'admin')));
 
 // --- Authentication & Users ---
 
@@ -330,6 +341,31 @@ app.put('/api/landing_pages/:id', async (req, res) => {
   }
 });
 
+
+// --- Frontend Routes ---
+
+// Route trang chủ POS
+app.get('/', (req, res) => {
+  res.sendFile(path.join(publicDir, 'index.html'));
+});
+
+// Route trang quản trị Admin
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(publicDir, 'admin', 'index.html'));
+});
+
+// Route trang cửa hàng dành cho khách
+app.get('/store', (req, res) => {
+  res.sendFile(path.join(publicDir, 'store.html'));
+});
+
+// Fallback: Mọi route khác (ngoại trừ /api/*) chuyển hướng về giao diện chính
+app.get('*', (req, res) => {
+  if (req.path.startsWith('/api')) {
+    return res.status(404).json({ error: 'Endpoint API không tồn tại' });
+  }
+  res.sendFile(path.join(publicDir, 'index.html'));
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
