@@ -13,8 +13,7 @@ jobs:
       - name: Deploy Code
         run: |
           cd D:\code\homechicken
-          git pull origin master
-          
-          npm install
-          pm2 restart all
+          git pull
+          npm run start
+
           
