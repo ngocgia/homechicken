@@ -15,11 +15,6 @@ jobs:
           cd D:\code\homechicken
           git pull origin master
           
-          # Thêm các lệnh build / restart service tùy thuộc vào loại dự án:
-          # Ví dụ với Node.js:
           npm install
           pm2 restart all
           
-          # Ví dụ với IIS / .NET:
-          # dotnet publish -c Release -o C:\inetpub\wwwroot\myapp
-          # iisreset /noforce
