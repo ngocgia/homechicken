@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:ns1="http://schemas.android.com/tools">
+    <color name="accent">#F39C12</color>
+    <color name="background">#F2F2F7</color>
+    <color name="primary">#D35400</color>
+    <color name="primary_dark">#BA4A00</color>
+    <color name="text_dark">#1C1C1E</color>
+    <color name="white">#FFFFFF</color>
+    <string name="app_name">Home Chicken POS</string>
+    <string name="app_package_name">vn.pro.giavdn.homechicken</string>
+    <string name="exit_confirm">Chạm lần nữa để thoát ứng dụng</string>
+    <string name="network_error_message">Vui lòng kiểm tra lại kết nối Wi-Fi / 4G hoặc cấu hình máy chủ của bạn.</string>
+    <string name="network_error_title">Không có kết nối mạng</string>
+    <string name="retry">Thử lại</string>
+    <style name="Theme.HomeChickenPOS" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryVariant">@color/primary_dark</item>
+        <item name="colorOnPrimary">@color/white</item>
+        
+        <item name="android:statusBarColor">@color/primary_dark</item>
+        <item name="android:windowLightStatusBar" ns1:targetApi="m">false</item>
+        
+        <item name="android:navigationBarColor">@color/white</item>
+        <item name="android:windowLightNavigationBar" ns1:targetApi="o_mr1">true</item>
+    </style>
+</resources>

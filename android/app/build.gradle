@@ -20,12 +20,18 @@ android {
         release {
             def keystorePropertiesFile = rootProject.file("keystore.properties")
             if (keystorePropertiesFile.exists()) {
-                def props = new Properties()
-                props.load(new FileInputStream(keystorePropertiesFile))
-                storeFile file(props['storeFile'])
-                storePassword props['storePassword']
-                keyAlias props['keyAlias']
-                keyPassword props['keyPassword']
+                def props = new java.util.Properties()
+                keystorePropertiesFile.withInputStream { props.load(it) }
+                def cleanProps = [:]
+                props.each { k, v ->
+                    cleanProps[k.toString().replace('\uFEFF', '').trim()] = v
+                }
+                if (cleanProps['storeFile']) {
+                    storeFile file(cleanProps['storeFile'])
+                    storePassword cleanProps['storePassword']
+                    keyAlias cleanProps['keyAlias']
+                    keyPassword cleanProps['keyPassword']
+                }
             }
         }
     }

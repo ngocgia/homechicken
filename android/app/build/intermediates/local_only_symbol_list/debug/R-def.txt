@@ -1,0 +1,27 @@
+R_DEF: Internal format may change without notice
+local
+color accent
+color background
+color primary
+color primary_dark
+color text_dark
+color white
+drawable progress_bar_drawable
+id btnRetry
+id errorLayout
+id progressBar
+id swipeRefreshLayout
+id webView
+layout activity_main
+mipmap ic_launcher
+mipmap ic_launcher_round
+string app_name
+string app_package_name
+string exit_confirm
+string network_error_message
+string network_error_title
+string retry
+style Theme.HomeChickenPOS
+xml backup_rules
+xml data_extraction_rules
+xml network_security_config
