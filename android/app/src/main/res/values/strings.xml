@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Home Chicken POS</string>
+    <string name="app_package_name">vn.pro.giavdn.homechicken</string>
+    <string name="network_error_title">Không có kết nối mạng</string>
+    <string name="network_error_message">Vui lòng kiểm tra lại kết nối Wi-Fi / 4G hoặc cấu hình máy chủ của bạn.</string>
+    <string name="retry">Thử lại</string>
+    <string name="exit_confirm">Chạm lần nữa để thoát ứng dụng</string>
+</resources>
