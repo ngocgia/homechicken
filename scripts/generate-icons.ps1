@@ -1,6 +1,7 @@
 Add-Type -AssemblyName System.Drawing
 
-$sourcePath = "d:\homechicken\google_play_assets\app_icon_512.png"
+$projectRoot = Split-Path -Parent $PSScriptRoot
+$sourcePath = Join-Path $projectRoot "google_play_assets\app_icon_512.png"
 if (-not (Test-Path $sourcePath)) {
     Write-Error "Source icon not found: $sourcePath"
     exit 1
@@ -18,7 +19,7 @@ $sizes = @(
 
 foreach ($item in $sizes) {
     $folderName = $item.Folder
-    $targetDir = "d:\homechicken\android\app\src\main\res\$folderName"
+    $targetDir = Join-Path $projectRoot "android\app\src\main\res\$folderName"
     if (-not (Test-Path $targetDir)) {
         New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
     }

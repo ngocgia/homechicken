@@ -195,46 +195,53 @@ async function handleAuthSubmit() {
         return;
     }
 
-    if (isLoginMode) {
-        // Đăng nhập
-        const { data, error } = await db.from('users').select('*').eq('username', username).eq('password', password);
-        if (error) {
-            alert('Lỗi truy vấn: ' + error.message);
-            return;
-        }
+    try {
+        if (isLoginMode) {
+            // Đăng nhập
+            const { data, error } = await db.from('users').select('*').eq('username', username).eq('password', password);
+            if (error) {
+                alert('Lỗi đăng nhập: ' + error.message);
+                return;
+            }
 
-        if (data && data.length > 0) {
-            currentUser = data[0];
-            localStorage.setItem('pos_current_user', JSON.stringify(currentUser));
-            showMainApp();
-        } else {
-            alert('Tên đăng nhập hoặc mật khẩu không đúng!');
-        }
-    } else {
-        // Đăng ký
-        // Kiểm tra xem username đã tồn tại chưa
-        const { data: existData, error: existError } = await db.from('users').select('*').eq('username', username);
-        if (existError) {
-            alert('Lỗi truy vấn: ' + existError.message);
-            return;
-        }
-        if (existData && existData.length > 0) {
-            alert('Tên đăng nhập này đã có người sử dụng. Vui lòng chọn tên khác!');
-            return;
-        }
-
-        // Thêm user mới
-        const { data, error } = await db.from('users').insert([{ username, password }]);
-        if (error) {
-            alert('Lỗi đăng ký: ' + error.message);
-        } else {
-            alert('Đăng ký thành công! Đang tự động đăng nhập...');
             if (data && data.length > 0) {
                 currentUser = data[0];
                 localStorage.setItem('pos_current_user', JSON.stringify(currentUser));
                 showMainApp();
+            } else {
+                alert('Tên đăng nhập hoặc mật khẩu không đúng!');
+            }
+        } else {
+            // Đăng ký
+            // Kiểm tra xem username đã tồn tại chưa
+            const { data: existData, error: existError } = await db.from('users').select('*').eq('username', username);
+            if (existError) {
+                alert('Lỗi truy vấn: ' + existError.message);
+                return;
+            }
+            if (existData && existData.length > 0) {
+                alert('Tên đăng nhập này đã có người sử dụng. Vui lòng chọn tên khác!');
+                return;
+            }
+
+            // Thêm user mới
+            const { data, error } = await db.from('users').insert([{ username, password }]);
+            if (error) {
+                alert('Lỗi đăng ký: ' + error.message);
+            } else {
+                alert('Đăng ký thành công! Đang tự động đăng nhập...');
+                if (data && data.length > 0) {
+                    currentUser = data[0];
+                    localStorage.setItem('pos_current_user', JSON.stringify(currentUser));
+                    showMainApp();
+                }
             }
         }
+    } catch (err) {
+        console.error('Lỗi xác thực:', err);
+        alert('Có lỗi xảy ra: ' + (err.message || 'Không thể kết nối máy chủ'));
+    } finally {
+        showAuthLoading(false);
     }
 }
 
@@ -918,14 +925,14 @@ async function addStockItem() {
             loadStockFromSupabase();
         }
     } else {
-        const newItem = { id: Date.now(), date, name, unit, qty, price, user_id: currentUser.id };
+        const newItem = { date, name, unit, qty, price, user_id: currentUser.id };
         const { error } = await db.from('stock').insert([newItem]);
         if (error) {
-            alert('Lỗi lưu Supabase: ' + error.message);
+            alert('Lỗi lưu nguyên liệu: ' + error.message);
         } else {
-            stockList.push(newItem);
+            alert('Đã thêm nguyên liệu thành công!');
             cancelEditStock();
-            renderStock();
+            loadStockFromSupabase();
         }
     }
 }
@@ -1352,56 +1359,66 @@ function renderTopItemsChart(filteredOrders) {
 
     const canvas = document.getElementById('topItemsChart');
     if (!canvas) return;
+
+    if (typeof Chart === 'undefined') {
+        console.warn('Thư viện Chart.js chưa được nạp (offline).');
+        return;
+    }
+
     const ctx = canvas.getContext('2d');
 
     if (topItemsChartInstance) {
-        topItemsChartInstance.destroy();
+        try { topItemsChartInstance.destroy(); } catch (e) {}
     }
 
-    topItemsChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Số lượng bán',
-                data: dataValues,
-                backgroundColor: 'rgba(211, 84, 0, 0.75)',
-                borderColor: 'rgba(211, 84, 0, 1)',
-                borderWidth: 1,
-                borderRadius: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: function (context) {
-                            return ` Đã bán: ${context.parsed.y} phần`;
+    try {
+        topItemsChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Số lượng bán',
+                    data: dataValues,
+                    backgroundColor: 'rgba(211, 84, 0, 0.75)',
+                    borderColor: 'rgba(211, 84, 0, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return ` Đã bán: ${context.parsed.y} phần`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: {
+                            font: { size: 10 },
+                            maxRotation: 45,
+                            minRotation: 25
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0,
+                            font: { size: 11 }
                         }
                     }
                 }
-            },
-            scales: {
-                x: {
-                    ticks: {
-                        font: { size: 10 },
-                        maxRotation: 45,
-                        minRotation: 25
-                    }
-                },
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        precision: 0,
-                        font: { size: 11 }
-                    }
-                }
             }
-        }
-    });
+        });
+    } catch (chartErr) {
+        console.warn('Lỗi khởi tạo biểu đồ:', chartErr);
+    }
 }
 
 function renderHistory() {
@@ -1592,14 +1609,15 @@ async function printReceipt() {
             }
         }
     } else {
-        orderRecord.id = Date.now();
-        const { error } = await db.from('sales_history').insert([orderRecord]);
+        const { data, error } = await db.from('sales_history').insert([orderRecord]);
         if (error) {
             console.error('Lỗi lưu đơn hàng:', error);
             alert('Lỗi khi lưu đơn hàng: ' + error.message);
             return;
         } else {
-            salesHistory.push(orderRecord);
+            const savedItem = (data && data.length > 0) ? data[0] : { ...orderRecord, id: Date.now() };
+            orderRecord.id = savedItem.id;
+            salesHistory.push(savedItem);
         }
     }
 
@@ -1662,7 +1680,7 @@ async function printReceipt() {
 }
 
 async function deleteOrder(orderId) {
-    if (confirm('Bạn có chắc muốn xóa hóa đơn này khỏi Supabase?')) {
+    if (confirm('Bạn có chắc muốn xóa hóa đơn này khỏi hệ thống?')) {
         const { error } = await db.from('sales_history').delete().eq('id', orderId).eq('user_id', currentUser.id);
         if (!error) {
             salesHistory = salesHistory.filter(o => o.id !== orderId);

@@ -56,10 +56,9 @@ class ApiQueryBuilder {
             } else if (this.action === 'update') {
                 method = 'PUT';
                 if (!this.filters.id) throw new Error("Update requires an 'id' filter");
-                url = `${this.baseUrl}/${this.table}/${this.filters.id}`;
+                url = `${this.baseUrl}/${endpoint}/${this.filters.id}`;
                 body = JSON.stringify(this.payload);
-                // add user_id filter if it exists in update payload? Wait, the API takes user_id in the body.
-                // We add any other filters into body
+                // add user_id filter if it exists in update payload
                 const bodyObj = JSON.parse(body);
                 if (this.filters.user_id) bodyObj.user_id = this.filters.user_id;
                 body = JSON.stringify(bodyObj);
@@ -67,7 +66,7 @@ class ApiQueryBuilder {
             } else if (this.action === 'delete') {
                 method = 'DELETE';
                 if (!this.filters.id) throw new Error("Delete requires an 'id' filter");
-                url = `${this.baseUrl}/${this.table}/${this.filters.id}`;
+                url = `${this.baseUrl}/${endpoint}/${this.filters.id}`;
                 if (this.filters.user_id) {
                     queryParams.append('user_id', this.filters.user_id);
                 }

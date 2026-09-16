@@ -3,8 +3,9 @@ param(
     [string]$KeyAlias = "homechicken"
 )
 
-$keystorePath = "d:\homechicken\android\release-key.jks"
-$propsPath = "d:\homechicken\android\keystore.properties"
+$projectRoot = Split-Path -Parent $PSScriptRoot
+$keystorePath = Join-Path $projectRoot "android\release-key.jks"
+$propsPath = Join-Path $projectRoot "android\keystore.properties"
 
 if (Test-Path $keystorePath) {
     Write-Host "Keystore already exists at: $keystorePath" -ForegroundColor Yellow
